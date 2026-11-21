@@ -1,0 +1,13 @@
+{
+  "name": "monsvers-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monsvers: The Battle Monster (Phaser.js + C++20/WASM)",
+  "scripts": {
+    "dev:client": "npm --prefix client-phaser run dev",
+    "build:client": "npm --prefix client-phaser run build",
+    "build:cpp": "cmake -S engine-cpp -B engine-cpp/build && cmake --build engine-cpp/build",
+    "test:cpp": "ctest --test-dir engine-cpp/build --output-on-failure",
+    "build:wasm": "emcmake cmake -S engine-cpp -B engine-cpp/build-wasm && cmake --build engine-cpp/build-wasm"
+  }
+}

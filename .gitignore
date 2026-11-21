@@ -1,0 +1,26 @@
+# Node / Vite / Phaser
+node_modules/
+client-phaser/dist/
+client-phaser/public/wasm/*.wasm
+client-phaser/public/wasm/*.js
+*.log
+npm-debug.log*
+
+# C++ / CMake / Emscripten
+engine-cpp/build/
+engine-cpp/build-wasm/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.exe
+Testing/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.env
+.env.local
