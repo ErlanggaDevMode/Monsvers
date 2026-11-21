@@ -166,16 +166,16 @@ export class BattleScene extends Phaser.Scene {
       .ellipse(this.playerPos.x, this.playerPos.y + 42, 74, 16, 0x020617, 0.55)
       .setDepth(8);
 
-    // Monster Sprites (scaled 3x crisp pixel art)
+    // Monster Sprites (textures are pre-scaled 3x -> 60x60; scale cleanly to fit platforms)
     this.enemySprite = this.add
       .image(this.enemyPos.x, this.enemyPos.y, getMonsterTextureKey(this.enemy.id, 0))
-      .setScale(3)
+      .setScale(1.6)
       .setFlipX(true)
       .setDepth(10);
 
     this.playerSprite = this.add
       .image(this.playerPos.x, this.playerPos.y, getMonsterTextureKey(this.player.id, 0))
-      .setScale(3.2)
+      .setScale(1.8)
       .setDepth(12);
 
     this._startIdleTweens();

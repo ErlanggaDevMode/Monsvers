@@ -415,10 +415,17 @@ class BattleBridge {
 
   async init() {
     try {
-      const wasmUrl = './wasm/monsvers_engine.js';
-      const mod = await import(/* @vite-ignore */ wasmUrl);
+      const baseHref =
+        typeof window !== 'undefined' && window.location?.href
+          ? window.location.href
+          : import.meta.url;
+      const wasmJsUrl = new URL('./wasm/monsvers_engine.js', baseHref).href;
+      const wasmBaseUrl = new URL('./wasm/', baseHref).href;
+      const mod = await import(/* @vite-ignore */ wasmJsUrl);
       if (typeof mod.default === 'function') {
-        this.wasm = await mod.default();
+        this.wasm = await mod.default({
+          locateFile: (path) => `${wasmBaseUrl}${path}`,
+        });
         this.runtime = 'cpp-wasm';
         this.capabilities = {
           resolveAttack: typeof this.wasm.resolveAttack === 'function',
