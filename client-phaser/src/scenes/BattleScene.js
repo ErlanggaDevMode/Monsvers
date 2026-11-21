@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import { battleBridge, Element } from '../bridge/battleBridge.js';
+import { battleBridge, Element, AiTier } from '../bridge/battleBridge.js';
+import { getSkill } from '../data/skills.js';
+import { MONSTERS, STARTER_IDS, createMonsterInstance } from '../data/monsters.js';
+import { getMonsterTextureKey } from '../art/pixelSprites.js';
+import { BattleHud, ELEMENT_META } from '../ui/BattleHud.js';
+
+const FONT = 'monospace';
 
 export class BattleScene extends Phaser.Scene {
   constructor() {
@@ -8,143 +14,762 @@ export class BattleScene extends Phaser.Scene {
 
   init(data) {
     this.runtime = data?.runtime ?? battleBridge.runtime;
+    this.battleNumber = data?.battleNumber ?? 1;
     this.isBusy = false;
+    this.battleEnded = false;
+    this.seedCounter = (Date.now() % 100000) + this.battleNumber * 97;
 
-    this.player = {
-      id: 'pyro_01',
-      name: 'Pyrofang',
-      element: Element.Fire,
-      level: 5,
-      maxHp: 120,
-      currentHp: 120,
-      attack: 28,
-      defense: 16,
-      speed: 22,
-    };
+    // Persist party across victories, or initialize starter party
+    if (Array.isArray(data?.party) && data.party.length > 0) {
+      this.party = data.party;
+      this.activePartyIndex = data.activePartyIndex ?? 0;
+      this.bag = data.bag ?? { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+    } else {
+      this.party = STARTER_IDS.map((id) => createMonsterInstance(id, 5));
+      this.activePartyIndex = 0;
+      this.bag = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+    }
 
-    this.enemy = {
-      id: 'leaf_01',
-      name: 'Verdantix',
-      element: Element.Nature,
-      level: 5,
-      maxHp: 115,
-      currentHp: 115,
-      attack: 24,
-      defense: 17,
-      speed: 19,
-    };
+    // Pick opponent from available MONSTERS roster
+    const allIds = Object.keys(MONSTERS);
+    const enemyPool = allIds.length > 1 ? allIds.filter((id) => id !== this.player.id) : allIds;
+    const enemyId = enemyPool[(this.battleNumber - 1) % enemyPool.length] ?? 'verdantix';
+    const enemyLevel = 5 + Math.floor((this.battleNumber - 1) / 2);
+    this.enemy = createMonsterInstance(enemyId, enemyLevel);
+    this.aiTier = this.battleNumber % 3 === 0 ? AiTier.Boss : AiTier.Trainer;
 
-    this.skills = [
-      { id: 'ember_claw', name: 'Ember Claw', element: Element.Fire, power: 40, accuracy: 100, critRatePct: 15 },
-      { id: 'tackle', name: 'Quick Strike', element: Element.Neutral, power: 30, accuracy: 100, critRatePct: 20 },
-    ];
+    this.idleFrame = 0;
+    this.playerPos = { x: 86, y: 242 };
+    this.enemyPos = { x: 274, y: 146 };
+  }
+
+  get player() {
+    return this.party[this.activePartyIndex];
+  }
+
+  nextSeed() {
+    this.seedCounter = (this.seedCounter + 7919) >>> 0;
+    return this.seedCounter;
   }
 
   create() {
-    const { width, height } = this.scale;
+    this._buildArenaBackdrop();
+    this._buildMonsterSprites();
 
-    // Arena backdrop
-    this.add.rectangle(width / 2, height / 2, width, height, 0x0f172a);
-    this.add.ellipse(250, 330, 220, 60, 0x1e293b);
-    this.add.ellipse(710, 240, 220, 60, 0x1e293b);
-
-    // Header
-    this.add.text(24, 18, 'MONSVERS: THE BATTLE MONSTER', {
-      fontSize: '20px',
-      fontStyle: 'bold',
-      color: '#f8fafc',
-    });
-    this.add
-      .text(width - 24, 22, `Core: ${this.runtime}`, {
-        fontSize: '13px',
-        color: '#94a3b8',
-      })
-      .setOrigin(1, 0);
-
-    // Monster placeholders (ready to swap with sprite sheets)
-    this.playerSprite = this.add.circle(250, 275, 52, 0xef4444).setStrokeStyle(4, 0xfca5a5);
-    this.enemySprite = this.add.circle(710, 185, 52, 0x22c55e).setStrokeStyle(4, 0x86efac);
-
-    this.playerHpText = this.add.text(140, 180, '', { fontSize: '16px', color: '#f8fafc', fontStyle: 'bold' });
-    this.enemyHpText = this.add.text(600, 90, '', { fontSize: '16px', color: '#f8fafc', fontStyle: 'bold' });
-
-    // Battle log panel
-    this.add.rectangle(width / 2, height - 72, width - 48, 112, 0x1e293b).setStrokeStyle(2, 0x334155);
-    this.logText = this.add.text(44, height - 114, 'Pilih skill untuk menyerang Verdantix!', {
-      fontSize: '16px',
-      color: '#e2e8f0',
-      wordWrap: { width: 520 },
+    this.hud = new BattleHud(this, {
+      onUseSkill: (skill) => this.handlePlayerAttack(skill),
+      onGuard: () => this.handlePlayerGuard(),
+      onUseItem: (itemId) => this.handleUseItem(itemId),
+      onSwitchParty: (idx) => this.handlePartySwitch(idx),
+      onRestart: () => this.scene.restart({ runtime: this.runtime, battleNumber: 1 }),
     });
 
-    // Action buttons
-    this.skills.forEach((skill, idx) => {
-      const btnX = 690 + idx * 135;
-      const btnY = height - 72;
-      const bg = this.add
-        .rectangle(btnX, btnY, 122, 48, idx === 0 ? 0xdc2626 : 0x334155)
-        .setInteractive({ useHandCursor: true })
-        .setStrokeStyle(2, 0x94a3b8);
+    this.hud.setEngineRuntime(this.runtime);
+    this.hud.setStageTitle(`CH.1 HUTAN SOLARA #${this.battleNumber}`);
+    this._syncHud(false);
+    this.hud.setLog(`Wild ${this.enemy.name} (Lv.${this.enemy.level}) muncul!\nPilih aksi untuk ${this.player.name}.`);
 
-      this.add.text(btnX, btnY, skill.name, { fontSize: '14px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-      bg.on('pointerdown', () => this.handlePlayerSkill(skill));
+    // 2-frame pixel idle animation timer
+    this.time.addEvent({
+      delay: 420,
+      loop: true,
+      callback: () => {
+        this.idleFrame = this.idleFrame === 0 ? 1 : 0;
+        this._applyMonsterTextures();
+      },
     });
-
-    this.refreshHud();
   }
 
-  refreshHud() {
-    this.playerHpText.setText(`${this.player.name} Lv.${this.player.level}\nHP: ${this.player.currentHp}/${this.player.maxHp}`);
-    this.enemyHpText.setText(`${this.enemy.name} Lv.${this.enemy.level}\nHP: ${this.enemy.currentHp}/${this.enemy.maxHp}`);
+  _buildArenaBackdrop() {
+    // Arena area: y: 42..350 (height 308, width 360)
+    if (this.textures.exists('bg_arena_solara')) {
+      const bg = this.add.image(180, 196, 'bg_arena_solara').setDepth(0);
+      bg.setDisplaySize(360, 312);
+    } else {
+      const g = this.add.graphics().setDepth(0);
+      // Twilight pixel-sky bands
+      g.fillStyle(0x0c172e, 1);
+      g.fillRect(0, 42, 360, 68);
+      g.fillStyle(0x132645, 1);
+      g.fillRect(0, 110, 360, 56);
+      g.fillStyle(0x1b3a54, 1);
+      g.fillRect(0, 166, 360, 48);
+
+      // Distant pixel forest mountain ridge
+      g.fillStyle(0x102538, 1);
+      g.fillTriangle(0, 214, 70, 146, 150, 214);
+      g.fillTriangle(110, 214, 210, 134, 310, 214);
+      g.fillTriangle(250, 214, 330, 152, 360, 214);
+
+      // Canopy silhouettes
+      g.fillStyle(0x0f332c, 1);
+      for (let x = 0; x < 360; x += 28) {
+        g.fillRect(x, 194 + ((x * 7) % 12), 26, 26);
+      }
+
+      // Sunlit forest ground
+      g.fillStyle(0x173c32, 1);
+      g.fillRect(0, 214, 360, 44);
+      g.fillStyle(0x122f2a, 1);
+      g.fillRect(0, 258, 360, 96);
+
+      // Subtle pixel grass accents
+      g.fillStyle(0x22c55e, 0.25);
+      for (let i = 0; i < 18; i++) {
+        const gx = (i * 43 + 12) % 348;
+        const gy = 222 + ((i * 29) % 112);
+        g.fillRect(gx, gy, 6, 2);
+      }
+    }
+
+    // Crisp battle platforms
+    const plat = this.add.graphics().setDepth(4);
+    // Enemy platform (top-right)
+    plat.fillStyle(0x091521, 0.72);
+    plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 42, 122, 30);
+    plat.fillStyle(0x1e4d3e, 0.9);
+    plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 38, 114, 24);
+    plat.lineStyle(2, 0x34d399, 0.45);
+    plat.strokeEllipse(this.enemyPos.x, this.enemyPos.y + 38, 114, 24);
+
+    // Player platform (bottom-left)
+    plat.fillStyle(0x091521, 0.78);
+    plat.fillEllipse(this.playerPos.x, this.playerPos.y + 46, 134, 32);
+    plat.fillStyle(0x1e4d3e, 0.95);
+    plat.fillEllipse(this.playerPos.x, this.playerPos.y + 42, 126, 26);
+    plat.lineStyle(2, 0x38bdf8, 0.45);
+    plat.strokeEllipse(this.playerPos.x, this.playerPos.y + 42, 126, 26);
+
+    // Ambient floating Solara fireflies
+    for (let i = 0; i < 8; i++) {
+      const mote = this.add
+        .rectangle(24 + i * 44, 90 + (i % 3) * 52, 3, 3, i % 2 === 0 ? 0xfde047 : 0x38bdf8, 0.55)
+        .setDepth(5);
+      this.tweens.add({
+        targets: mote,
+        y: mote.y - 18,
+        alpha: 0.12,
+        yoyo: true,
+        repeat: -1,
+        duration: 1600 + i * 240,
+        ease: 'Sine.easeInOut',
+      });
+    }
   }
 
-  handlePlayerSkill(skill) {
-    if (this.isBusy || this.player.currentHp <= 0 || this.enemy.currentHp <= 0) return;
-    this.isBusy = true;
+  _buildMonsterSprites() {
+    // Shadows
+    this.enemyShadow = this.add
+      .ellipse(this.enemyPos.x, this.enemyPos.y + 38, 66, 14, 0x020617, 0.5)
+      .setDepth(8);
+    this.playerShadow = this.add
+      .ellipse(this.playerPos.x, this.playerPos.y + 42, 74, 16, 0x020617, 0.55)
+      .setDepth(8);
 
-    const isCrit = Math.random() * 100 < skill.critRatePct;
-    const report = battleBridge.calculateDamage(this.player, this.enemy, skill, isCrit);
-    this.enemy.currentHp = report.targetRemainingHp;
+    // Monster Sprites (scaled 3x crisp pixel art)
+    this.enemySprite = this.add
+      .image(this.enemyPos.x, this.enemyPos.y, getMonsterTextureKey(this.enemy.id, 0))
+      .setScale(3)
+      .setFlipX(true)
+      .setDepth(10);
+
+    this.playerSprite = this.add
+      .image(this.playerPos.x, this.playerPos.y, getMonsterTextureKey(this.player.id, 0))
+      .setScale(3.2)
+      .setDepth(12);
+
+    this._startIdleTweens();
+  }
+
+  _startIdleTweens() {
+    this.tweens.killTweensOf([this.playerSprite, this.enemySprite]);
+
+    this.playerSprite.setPosition(this.playerPos.x, this.playerPos.y).setAlpha(1);
+    this.enemySprite.setPosition(this.enemyPos.x, this.enemyPos.y).setAlpha(1);
+
+    this.tweens.add({
+      targets: this.playerSprite,
+      y: this.playerPos.y - 4,
+      yoyo: true,
+      repeat: -1,
+      duration: 900,
+      ease: 'Sine.easeInOut',
+    });
 
     this.tweens.add({
       targets: this.enemySprite,
-      alpha: 0.25,
+      y: this.enemyPos.y - 4,
       yoyo: true,
-      repeat: 2,
-      duration: 80,
+      repeat: -1,
+      duration: 980,
+      ease: 'Sine.easeInOut',
     });
+  }
 
-    const eff = report.elementMultiplier > 1 ? ' (Super Effective!)' : '';
-    const crit = report.critical ? ' CRITICAL!' : '';
-    this.logText.setText(`${this.player.name} memakai ${skill.name}! Damage: ${report.damage}${eff}${crit}`);
-    this.refreshHud();
+  _applyMonsterTextures() {
+    if (!this.playerSprite || !this.enemySprite) return;
+    const pKey = getMonsterTextureKey(this.player.id, this.idleFrame);
+    const eKey = getMonsterTextureKey(this.enemy.id, this.idleFrame);
+    if (this.textures.exists(pKey)) this.playerSprite.setTexture(pKey);
+    if (this.textures.exists(eKey)) this.enemySprite.setTexture(eKey);
+  }
 
-    if (report.targetFainted) {
-      this.logText.setText(`${this.enemy.name} tumbang! ${this.player.name} MENANG!`);
-      this.isBusy = false;
-      return;
-    }
+  _syncHud(animateBars = true) {
+    const playerSkills = (this.player.skills ?? []).map((id) => getSkill(id));
+    this.hud.updateState(
+      {
+        player: this.player,
+        enemy: this.enemy,
+        playerSkills,
+        party: this.party,
+        activePartyIndex: this.activePartyIndex,
+        bag: this.bag,
+      },
+      animateBars
+    );
+  }
 
-    // Enemy counterattack
-    this.time.delayedCall(650, () => {
-      const enemySkill = { id: 'vine_whip', name: 'Vine Lash', element: Element.Nature, power: 36, accuracy: 100, critRatePct: 10 };
-      const counter = battleBridge.calculateDamage(this.enemy, this.player, enemySkill, false);
-      this.player.currentHp = counter.targetRemainingHp;
+  _setBusy(busy) {
+    this.isBusy = busy;
+    this.hud.setBusy(busy);
+  }
 
+  _delay(ms) {
+    return new Promise((resolve) => this.time.delayedCall(ms, resolve));
+  }
+
+  _spawnParticles(x, y, color = 0xffffff, count = 14) {
+    if (!this.textures.exists('particle_pixel')) return;
+    const emitter = this.add.particles(x, y, 'particle_pixel', {
+      speed: { min: 45, max: 145 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1.8, end: 0.3 },
+      alpha: { start: 1, end: 0 },
+      lifespan: { min: 260, max: 460 },
+      tint: color,
+      emitting: false,
+    });
+    emitter.setDepth(40);
+    emitter.explode(count);
+    this.time.delayedCall(520, () => emitter.destroy());
+  }
+
+  _spawnPopup(x, y, text, color = '#ffffff', fontSize = '14px') {
+    const popup = this.add
+      .text(x, y, text, {
+        fontFamily: FONT,
+        fontSize,
+        fontStyle: 'bold',
+        color,
+        stroke: '#070b14',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
+
+    this.tweens.add({
+      targets: popup,
+      y: y - 34,
+      alpha: 0,
+      duration: 850,
+      ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy(),
+    });
+  }
+
+  async _animateLunge(sprite, homePos, dx, dy) {
+    this.tweens.killTweensOf(sprite);
+    await new Promise((resolve) => {
       this.tweens.add({
-        targets: this.playerSprite,
+        targets: sprite,
+        x: homePos.x + dx,
+        y: homePos.y + dy,
+        duration: 120,
+        ease: 'Quad.easeOut',
+        yoyo: true,
+        onComplete: () => {
+          sprite.setPosition(homePos.x, homePos.y);
+          resolve();
+        },
+      });
+    });
+  }
+
+  async _animateHitFlash(sprite, shakeIntensity = 0) {
+    if (shakeIntensity > 0) {
+      this.cameras.main.shake(140, shakeIntensity);
+    }
+    sprite.setTintFill(0xffffff);
+    await this._delay(80);
+    sprite.clearTint();
+    await new Promise((resolve) => {
+      this.tweens.add({
+        targets: sprite,
         alpha: 0.25,
         yoyo: true,
         repeat: 2,
-        duration: 80,
+        duration: 55,
+        onComplete: () => {
+          sprite.setAlpha(1);
+          resolve();
+        },
+      });
+    });
+  }
+
+  async _executeAttack(attacker, defender, skill, isPlayerAttacking) {
+    const atkSprite = isPlayerAttacking ? this.playerSprite : this.enemySprite;
+    const defSprite = isPlayerAttacking ? this.enemySprite : this.playerSprite;
+    const atkHome = isPlayerAttacking ? this.playerPos : this.enemyPos;
+    const defHome = isPlayerAttacking ? this.enemyPos : this.playerPos;
+
+    // Resolve attack in C++ WASM (or JS fallback) BEFORE mutating attacker SP
+    const report = battleBridge.resolveAttack(attacker, defender, skill, this.nextSeed());
+
+    // Apply SP cost returned by engine
+    const spCost = skill.spCost ?? 0;
+    attacker.currentSp =
+      report.attackerRemainingSp !== undefined
+        ? report.attackerRemainingSp
+        : Math.max(0, (attacker.currentSp ?? 0) - spCost);
+    this._syncHud(true);
+
+    if (report.paralyzed) {
+      this.hud.setLog(`${attacker.name} lumpuh dan tidak bisa bergerak!`);
+      this._spawnPopup(atkHome.x, atkHome.y - 26, 'PARALYZED!', '#facc15', '12px');
+      await this._delay(650);
+      return report;
+    }
+
+    // Lunge toward target
+    await this._animateLunge(atkSprite, atkHome, isPlayerAttacking ? 34 : -34, isPlayerAttacking ? -18 : 18);
+
+    if (report.missed) {
+      this.hud.setLog(`${attacker.name} memakai ${skill.name}, tetapi meleset!`);
+      this._spawnPopup(defHome.x, defHome.y - 24, 'MISS!', '#94a3b8', '13px');
+      await this._delay(600);
+      return report;
+    }
+
+    // Support / Heal / Self-Buff skill (power === 0)
+    const vfxColor = skill.vfxColor ?? (ELEMENT_META[skill.element]?.color ?? 0xffffff);
+    if ((skill.power ?? 0) <= 0) {
+      this._spawnParticles(atkHome.x, atkHome.y, vfxColor, 16);
+      let logMsg = `${attacker.name} memakai ${skill.name}!`;
+      if ((report.healed ?? 0) > 0) {
+        attacker.currentHp = report.attackerRemainingHp ?? Math.min(attacker.maxHp, attacker.currentHp + report.healed);
+        this._spawnPopup(atkHome.x, atkHome.y - 24, `+${report.healed} HP`, '#4ade80', '14px');
+        logMsg += ` (+${report.healed} HP)`;
+      }
+      if (report.appliedStatus === 'Shield' || report.appliedStatus === 'AttackUp') {
+        attacker.status = report.appliedStatus;
+        attacker.statusTurns = report.statusTurns || 3;
+        this._spawnPopup(atkHome.x, atkHome.y - 4, `${report.appliedStatus.toUpperCase()}!`, '#38bdf8', '11px');
+        logMsg += ` [${report.appliedStatus} aktif]`;
+      } else if (report.appliedStatus && report.appliedStatus !== 'None') {
+        defender.status = report.appliedStatus;
+        defender.statusTurns = report.statusTurns || 3;
+        this._spawnPopup(defHome.x, defHome.y - 4, `${report.appliedStatus.toUpperCase()}!`, '#f97316', '11px');
+        logMsg += ` (${defender.name} terkena ${report.appliedStatus}!)`;
+      }
+      this._syncHud(true);
+      this.hud.setLog(logMsg);
+      await this._delay(650);
+      return report;
+    }
+
+    // Elemental VFX & Hit flash
+    this._spawnParticles(defHome.x, defHome.y, vfxColor, report.critical ? 22 : 14);
+
+    const isSuper = report.elementMultiplier > 1.05;
+    const isResist = report.elementMultiplier < 0.95;
+    const shake = report.critical ? 0.015 : isSuper ? 0.009 : 0;
+
+    defender.currentHp = report.targetRemainingHp;
+    this._syncHud(true);
+    await this._animateHitFlash(defSprite, shake);
+
+    const dmgLabel = report.critical ? `-${report.damage} CRIT!` : `-${report.damage}`;
+    const dmgColor = report.critical ? '#fde047' : isSuper ? '#fb923c' : '#f8fafc';
+    this._spawnPopup(defHome.x, defHome.y - 22, dmgLabel, dmgColor, report.critical ? '16px' : '14px');
+
+    if (isSuper) {
+      this._spawnPopup(defHome.x, defHome.y - 44, 'SUPER EFFECTIVE!', '#4ade80', '11px');
+    } else if (isResist) {
+      this._spawnPopup(defHome.x, defHome.y - 44, 'NOT EFFECTIVE', '#94a3b8', '10px');
+    }
+
+    let logMsg = `${attacker.name} memakai ${skill.name}! (${report.damage} dmg)`;
+    if (report.critical) logMsg += ' CRITICAL!';
+    if (isSuper) logMsg += ' Super Effective!';
+
+    if (report.appliedStatus && report.appliedStatus !== 'None') {
+      defender.status = report.appliedStatus;
+      defender.statusTurns = report.statusTurns || 3;
+      this._spawnPopup(defHome.x, defHome.y - 4, `${report.appliedStatus.toUpperCase()}!`, '#f97316', '11px');
+      logMsg += `\n${defender.name} terkena ${report.appliedStatus}!`;
+      this._syncHud(true);
+    }
+
+    this.hud.setLog(logMsg);
+    await this._delay(700);
+    return report;
+  }
+
+  _pickEnemySkill() {
+    const enemySkills = (this.enemy.skills ?? []).map((id) => getSkill(id));
+    const choice = battleBridge.chooseEnemySkill(
+      this.enemy,
+      this.player,
+      enemySkills,
+      this.aiTier,
+      this.nextSeed()
+    );
+    return choice.skill ?? getSkill('quick_strike');
+  }
+
+  async handlePlayerAttack(skill) {
+    if (this.isBusy || this.battleEnded) return;
+    if ((this.player.currentSp ?? 0) < (skill.spCost ?? 0)) {
+      this.hud.setLog('SP tidak cukup! Gunakan Quick Strike atau Guard.');
+      return;
+    }
+
+    this._setBusy(true);
+    this.player.guarding = false;
+    this.enemy.guarding = false;
+
+    const enemySkill = this._pickEnemySkill();
+    const order = battleBridge.determineTurnOrder(this.player, skill, this.enemy, enemySkill);
+
+    if (order.m1First) {
+      const pRes = await this._executeAttack(this.player, this.enemy, skill, true);
+      if (pRes.targetFainted) {
+        await this._handleVictory();
+        return;
+      }
+      const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
+      if (eRes.targetFainted) {
+        await this._handlePlayerFainted();
+        return;
+      }
+    } else {
+      const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
+      if (eRes.targetFainted) {
+        await this._handlePlayerFainted();
+        return;
+      }
+      const pRes = await this._executeAttack(this.player, this.enemy, skill, true);
+      if (pRes.targetFainted) {
+        await this._handleVictory();
+        return;
+      }
+    }
+
+    await this._runEndOfTurnPhase();
+  }
+
+  async handlePlayerGuard() {
+    if (this.isBusy || this.battleEnded) return;
+    this._setBusy(true);
+
+    const guardRes = battleBridge.resolveGuard(this.player);
+    this.player.guarding = true;
+    this.player.currentSp = guardRes.currentSp;
+    this._syncHud(true);
+
+    this._spawnParticles(this.playerPos.x, this.playerPos.y, 0x38bdf8, 12);
+    this._spawnPopup(this.playerPos.x, this.playerPos.y - 26, `GUARD +${guardRes.spRestored} SP`, '#38bdf8', '12px');
+    this.hud.setLog(`${this.player.name} bertahan! Damage -40% & pulih +${guardRes.spRestored} SP.`);
+    await this._delay(650);
+
+    const enemySkill = this._pickEnemySkill();
+    const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
+    this.player.guarding = false;
+
+    if (eRes.targetFainted) {
+      await this._handlePlayerFainted();
+      return;
+    }
+
+    await this._runEndOfTurnPhase();
+  }
+
+  async handleUseItem(itemId) {
+    if (this.isBusy || this.battleEnded) return;
+    if ((this.bag[itemId] ?? 0) <= 0) return;
+
+    this._setBusy(true);
+    this.player.guarding = false;
+
+    if (itemId === 'potion' || itemId === 'super_potion') {
+      const healAmount = itemId === 'super_potion' ? 90 : 45;
+      if (this.player.currentHp >= this.player.maxHp) {
+        this.hud.setLog(`HP ${this.player.name} sudah penuh!`);
+        this._setBusy(false);
+        return;
+      }
+      this.bag[itemId] -= 1;
+      const before = this.player.currentHp;
+      this.player.currentHp = Math.min(this.player.maxHp, this.player.currentHp + healAmount);
+      const actual = this.player.currentHp - before;
+      this._syncHud(true);
+
+      this._spawnParticles(this.playerPos.x, this.playerPos.y, 0x4ade80, 14);
+      this._spawnPopup(this.playerPos.x, this.playerPos.y - 26, `+${actual} HP`, '#4ade80', '14px');
+      this.hud.setLog(`Menggunakan ${itemId === 'super_potion' ? 'Super Potion' : 'Potion'}! ${this.player.name} pulih +${actual} HP.`);
+      await this._delay(700);
+    } else if (itemId === 'antidote') {
+      if (!this.player.status || this.player.status === 'None') {
+        this.hud.setLog(`${this.player.name} tidak memiliki status negatif.`);
+        this._setBusy(false);
+        return;
+      }
+      this.bag.antidote -= 1;
+      this.player.status = 'None';
+      this.player.statusTurns = 0;
+      this._syncHud(true);
+
+      this._spawnParticles(this.playerPos.x, this.playerPos.y, 0xc084fc, 12);
+      this._spawnPopup(this.playerPos.x, this.playerPos.y - 26, 'CURED!', '#e9d5ff', '13px');
+      this.hud.setLog(`Antidote menyembuhkan status ${this.player.name}!`);
+      await this._delay(650);
+    } else if (itemId === 'rift_orb') {
+      this.bag.rift_orb -= 1;
+      this._syncHud(true);
+      this.hud.setLog(`Melempar Rift Orb ke ${this.enemy.name}...`);
+
+      // Animate Rift Orb throw
+      const orb = this.add.circle(this.playerPos.x + 20, this.playerPos.y - 10, 8, 0x38bdf8).setStrokeStyle(2, 0xf8fafc).setDepth(35);
+      await new Promise((resolve) => {
+        this.tweens.add({
+          targets: orb,
+          x: this.enemyPos.x,
+          y: this.enemyPos.y,
+          duration: 380,
+          ease: 'Quad.easeOut',
+          onComplete: resolve,
+        });
       });
 
-      this.refreshHud();
-      if (counter.targetFainted) {
-        this.logText.setText(`${this.player.name} tumbang! Coba lagi.`);
-      } else {
-        this.logText.setText(`${this.enemy.name} membalas dengan ${enemySkill.name} (${counter.damage} dmg). Giliranmu!`);
+      this._spawnParticles(this.enemyPos.x, this.enemyPos.y, 0x38bdf8, 18);
+      const cap = battleBridge.calculateCapture(this.enemy, 1.25, this.nextSeed());
+      this.enemySprite.setAlpha(0.25);
+
+      for (let i = 0; i < Math.max(1, cap.shakes); i++) {
+        await new Promise((resolve) => {
+          this.tweens.add({
+            targets: orb,
+            x: this.enemyPos.x + (i % 2 === 0 ? 8 : -8),
+            duration: 140,
+            yoyo: true,
+            onComplete: resolve,
+          });
+        });
+        await this._delay(120);
       }
-      this.isBusy = false;
+
+      orb.destroy();
+
+      if (cap.captured) {
+        this.enemySprite.setVisible(false);
+        this.battleEnded = true;
+        this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'CAPTURED!', '#38bdf8', '16px');
+        this.hud.setLog(`Berhasil! ${this.enemy.name} tertangkap oleh Rift Orb!`);
+        await this._delay(600);
+        this._showNextBattleModal(
+          'CAPTURED!',
+          `${this.enemy.name} masuk ke Rift Storage!`,
+          `Catch Rate: ${Math.round(cap.catchRate * 100)}%\nTim siap melanjutkan petualangan.`,
+          0x38bdf8
+        );
+        return;
+      }
+
+      this.enemySprite.setAlpha(1);
+      this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'BROKE FREE!', '#f97316', '12px');
+      this.hud.setLog(`${this.enemy.name} berhasil melepaskan diri dari Rift Orb!`);
+      await this._delay(650);
+    }
+
+    // Enemy turn after item use
+    const enemySkill = this._pickEnemySkill();
+    const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
+    if (eRes.targetFainted) {
+      await this._handlePlayerFainted();
+      return;
+    }
+
+    await this._runEndOfTurnPhase();
+  }
+
+  async handlePartySwitch(newIndex) {
+    if (this.isBusy || this.battleEnded) return;
+    if (newIndex === this.activePartyIndex) return;
+    if (!this.party[newIndex] || this.party[newIndex].currentHp <= 0) return;
+
+    const wasFainted = this.player.currentHp <= 0;
+    this._setBusy(true);
+
+    this.activePartyIndex = newIndex;
+    this.player.guarding = false;
+    this._applyMonsterTextures();
+    this._startIdleTweens();
+    this._syncHud(false);
+
+    this._spawnParticles(this.playerPos.x, this.playerPos.y, ELEMENT_META[this.player.element]?.color ?? 0x38bdf8, 14);
+    this.hud.setLog(`Maju, ${this.player.name}!`);
+    this.hud.setMode('FIGHT');
+    await this._delay(550);
+
+    // If switched voluntarily while alive, enemy gets a turn
+    if (!wasFainted) {
+      const enemySkill = this._pickEnemySkill();
+      const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
+      if (eRes.targetFainted) {
+        await this._handlePlayerFainted();
+        return;
+      }
+      await this._runEndOfTurnPhase();
+    } else {
+      this.hud.setLog(`Giliran ${this.player.name}! Pilih aksimu.`);
+      this._setBusy(false);
+    }
+  }
+
+  async _runEndOfTurnPhase() {
+    // Process player status tick + SP regen
+    const pTick = battleBridge.processStatusTick(this.player, this.nextSeed());
+    this.player.currentHp = pTick.remainingHp;
+    this.player.currentSp = pTick.nextSp;
+    this.player.status = pTick.nextStatus;
+    this.player.statusTurns = pTick.nextStatusTurns;
+
+    if (pTick.damage > 0) {
+      this._syncHud(true);
+      this._spawnPopup(this.playerPos.x, this.playerPos.y - 22, `-${pTick.damage} ${pTick.status}`, '#f97316', '12px');
+      this.hud.setLog(pTick.message);
+      await this._delay(600);
+      if (pTick.fainted) {
+        await this._handlePlayerFainted();
+        return;
+      }
+    }
+
+    // Process enemy status tick + SP regen
+    const eTick = battleBridge.processStatusTick(this.enemy, this.nextSeed());
+    this.enemy.currentHp = eTick.remainingHp;
+    this.enemy.currentSp = eTick.nextSp;
+    this.enemy.status = eTick.nextStatus;
+    this.enemy.statusTurns = eTick.nextStatusTurns;
+
+    if (eTick.damage > 0) {
+      this._syncHud(true);
+      this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 22, `-${eTick.damage} ${eTick.status}`, '#f97316', '12px');
+      this.hud.setLog(eTick.message);
+      await this._delay(600);
+      if (eTick.fainted) {
+        await this._handleVictory();
+        return;
+      }
+    }
+
+    this._syncHud(true);
+    this._startIdleTweens();
+    this.hud.setLog(`Giliran ${this.player.name}! Pilih skill atau aksi.`);
+    this._setBusy(false);
+  }
+
+  async _handlePlayerFainted() {
+    this._spawnParticles(this.playerPos.x, this.playerPos.y, 0xef4444, 18);
+    this.playerSprite.setAlpha(0.25);
+    this.hud.setLog(`${this.player.name} tumbang!`);
+    await this._delay(700);
+
+    const aliveIdx = this.party.findIndex((m) => m.currentHp > 0);
+    if (aliveIdx !== -1) {
+      this.hud.setMode('PARTY');
+      this.hud.setLog(`${this.player.name} tumbang! Pilih Monsver lain dari PARTY.`);
+      this._syncHud(false);
+      this._setBusy(false);
+      return;
+    }
+
+    this.battleEnded = true;
+    this.hud.showResultModal({
+      title: 'DEFEATED',
+      subtitle: 'Seluruh Monsver dalam party tumbang!',
+      detail: `Tantangan berhenti di Battle #${this.battleNumber}.\nPulihkan tim dan coba lagi!`,
+      buttonLabel: 'PLAY AGAIN',
+      accentColor: 0xef4444,
+      onAction: () => this.scene.restart({ runtime: this.runtime, battleNumber: 1 }),
+    });
+  }
+
+  async _handleVictory() {
+    this.battleEnded = true;
+    this._spawnParticles(this.enemyPos.x, this.enemyPos.y, 0xfde047, 24);
+    this.tweens.add({
+      targets: this.enemySprite,
+      alpha: 0,
+      y: this.enemyPos.y + 18,
+      duration: 380,
+    });
+
+    const xpGain = 35 + this.enemy.level * 12;
+    const xpRes = battleBridge.grantXp(this.player, xpGain);
+    this.player.level = xpRes.newLevel;
+    this.player.xp = xpRes.xp;
+    this.player.xpToNext = xpRes.xpToNext;
+    this.player.maxHp = xpRes.maxHp;
+    this.player.currentHp = xpRes.currentHp;
+    this.player.attack = xpRes.attack;
+    this.player.defense = xpRes.defense;
+    this.player.speed = xpRes.speed;
+    this._syncHud(true);
+
+    if (xpRes.leveledUp) {
+      this._spawnPopup(this.playerPos.x, this.playerPos.y - 34, `LEVEL UP! Lv.${xpRes.newLevel}`, '#fde047', '14px');
+    }
+
+    const lvlNote = xpRes.leveledUp ? `\nLEVEL UP! ${this.player.name} naik ke Lv.${xpRes.newLevel}!` : '';
+    this.hud.setLog(`${this.enemy.name} tumbang! +${xpGain} XP.${lvlNote}`);
+    await this._delay(850);
+
+    this._showNextBattleModal(
+      'VICTORY!',
+      `${this.enemy.name} berhasil dikalahkan!`,
+      `${this.player.name} mendapat +${xpGain} XP${lvlNote}`,
+      0x22c55e
+    );
+  }
+
+  _showNextBattleModal(title, subtitle, detail, accentColor) {
+    this.hud.showResultModal({
+      title,
+      subtitle,
+      detail,
+      buttonLabel: 'NEXT BATTLE',
+      accentColor,
+      onAction: () => {
+        // Light recovery between battles
+        this.party.forEach((m) => {
+          if (m.currentHp > 0) {
+            m.currentHp = Math.min(m.maxHp, m.currentHp + Math.round(m.maxHp * 0.3));
+            m.currentSp = Math.min(m.maxSp, m.currentSp + 12);
+          }
+          m.status = 'None';
+          m.statusTurns = 0;
+          m.guarding = false;
+        });
+        this.scene.restart({
+          runtime: this.runtime,
+          battleNumber: this.battleNumber + 1,
+          party: this.party,
+          activePartyIndex: this.activePartyIndex,
+          bag: this.bag,
+        });
+      },
     });
   }
 }

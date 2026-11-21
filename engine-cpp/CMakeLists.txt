@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(monsvers_engine VERSION 0.1.0 LANGUAGES CXX)
+project(monsvers_engine VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -7,11 +7,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(monsvers_core STATIC
     src/battle_engine.cpp
+    src/ai_controller.cpp
 )
 
 target_include_directories(monsvers_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(monsvers_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
 
 if(EMSCRIPTEN)
     add_executable(monsvers_wasm
@@ -36,5 +41,8 @@ else()
         tests/test_battle_engine.cpp
     )
     target_link_libraries(test_battle_engine PRIVATE monsvers_core)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(test_battle_engine PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
     add_test(NAME BattleEngineTests COMMAND test_battle_engine)
 endif()

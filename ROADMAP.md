@@ -5,10 +5,10 @@ Roadmap pengembangan bertahap menggunakan tim Paperclip (`Antigravity`, `Bima`, 
 ---
 
 ## Sprint 1 — Foundation: C++20/WASM Engine + Mobile-First Pixel Art Core
-- [ ] **M1.1 (DevOps / Toolchain):** Install `g++`, `cmake`, dan `emscripten` di VPS; compile & verifikasi `monsvers_engine.wasm` + native `CTest`.
-- [ ] **M1.2 (C++ Core — Battle Engine v2):** Expand `engine-cpp/` dengan full Turn Manager, 4-skill SP/Accuracy system, Status Effects (`Burn`, `Poison`, `Paralyze`, `Shield`, `AttackUp`), Guard action, Capture probability (Rift Orb), XP/Level-Up/Evolution calculator, dan Tactical Enemy AI (`Wild`, `Rival`, `Boss`).
-- [ ] **M1.3 (Phaser Mobile Portrait & Pixel Art System):** Refactor `client-phaser/` ke layout **Mobile-First Portrait (`360×640`)**, procedural crisp pixel-art monster spritesheet generator (starter + enemies + arena parallax), modern pixel HUD, HP/SP/XP bars, dan battle juice (particles, screen shake, floating damage numbers).
-- [ ] **M1.4 (WASM Integration & QA):** Sambungkan `battleBridge.js` ke binary `monsvers_engine.wasm` asli, tes native CTest + build Vite + live preview di `https://nayakacode.web.id/monsvers/`.
+- [x] **M1.1 (DevOps / Toolchain):** Install `g++`, `cmake`, dan `emscripten` di VPS; compile & verifikasi `monsvers_engine.wasm` + native `CTest`.
+- [x] **M1.2 (C++ Core — Battle Engine v2):** Expand `engine-cpp/` dengan full Turn Manager, 4-skill SP/Accuracy system, Status Effects (`Burn`, `Poison`, `Paralyze`, `Shield`, `AttackUp`), Guard action, Capture probability (Rift Orb), XP/Level-Up/Evolution calculator, dan Tactical Enemy AI (`Wild`, `Rival`, `Boss`).
+- [x] **M1.3 (Phaser Mobile Portrait & Pixel Art System):** Refactor `client-phaser/` ke layout **Mobile-First Portrait (`360×640`)**, procedural crisp pixel-art monster spritesheet generator (starter + enemies + arena parallax), modern pixel HUD, HP/SP/XP bars, dan battle juice (particles, screen shake, floating damage numbers).
+- [x] **M1.4 (WASM Integration & QA):** Sambungkan `battleBridge.js` ke binary `monsvers_engine.wasm` asli, tes native CTest + build Vite + live preview di `https://nayakacode.web.id/monsvers/`.
 
 ---
 
