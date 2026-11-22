@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CHAPTERS, CAMPAIGN_NODES, getNodesByChapter } from '../data/campaign.js';
 import { MONSTERS } from '../data/monsters.js';
 import { SHOP_ITEMS } from '../data/items.js';
-import { getMonsterTextureKey } from '../art/pixelSprites.js';
+import { getMonsterTextureKey, getMonsterSilhouetteKey } from '../art/pixelSprites.js';
 import { battleBridge } from '../bridge/battleBridge.js';
 import { gameState } from '../state/gameState.js';
 import { audioManager } from '../audio/audioManager.js';
@@ -1074,13 +1074,12 @@ export class WorldMapScene extends Phaser.Scene {
         .setStrokeStyle(isSelected ? 2 : 1, isSelected ? 0xfde047 : isCaught ? 0x34d399 : 0x263554)
         .setInteractive({ useHandCursor: true });
 
-      const texKey = getMonsterTextureKey(mon.id, 0);
+      const texKey = isSeen ? getMonsterTextureKey(mon.id, 0) : getMonsterSilhouetteKey(mon.id);
       const sp = this.add
         .image(x + cellW / 2, y + 29, this.textures.exists(texKey) ? texKey : 'particle_pixel')
         .setScale(0.68);
       if (!isSeen) {
-        sp.setTint(0x090e1a);
-        sp.setAlpha(0.72);
+        sp.setAlpha(0.85);
       } else if (!isCaught) {
         sp.setAlpha(0.88);
       }
@@ -1135,14 +1134,13 @@ export class WorldMapScene extends Phaser.Scene {
     const spriteFrame = this.add
       .rectangle(detX + 44, detY + 46, 70, 70, 0x09111f)
       .setStrokeStyle(1, selSeen ? meta.color : 0x334155);
-    const selTex0 = getMonsterTextureKey(sel.id, 0);
+    const selTex0 = selSeen ? getMonsterTextureKey(sel.id, 0) : getMonsterSilhouetteKey(sel.id);
     const selTex1 = getMonsterTextureKey(sel.id, 1);
     const detSprite = this.add
       .image(detX + 44, detY + 46, this.textures.exists(selTex0) ? selTex0 : 'particle_pixel')
       .setScale(1.04);
     if (!selSeen) {
-      detSprite.setTint(0x090e1a);
-      detSprite.setAlpha(0.72);
+      detSprite.setAlpha(0.85);
     } else {
       let f = 0;
       this.dexAnimTimer = this.time.addEvent({

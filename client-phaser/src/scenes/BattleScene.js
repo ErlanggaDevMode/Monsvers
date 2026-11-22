@@ -64,7 +64,7 @@ export class BattleScene extends Phaser.Scene {
     this.playerGroundRing = null;
     // Landscape 640x360 arena positions (y: 32..234) tuned for HD 64x64 / 56x64 textures
     this.playerPos = { x: 164, y: 180 };
-    this.enemyPos = { x: 478, y: 112 };
+    this.enemyPos = { x: 478, y: 100 };
   }
 
   get player() {
