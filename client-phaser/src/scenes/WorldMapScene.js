@@ -4,11 +4,15 @@ import { MONSTERS } from '../data/monsters.js';
 import { SHOP_ITEMS } from '../data/items.js';
 import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { battleBridge } from '../bridge/battleBridge.js';
-import { ELEMENT_META } from '../ui/BattleHud.js';
 import { gameState } from '../state/gameState.js';
 import { audioManager } from '../audio/audioManager.js';
-
-const FONT = 'monospace';
+import {
+  FONTS,
+  ELEMENT_STYLE,
+  drawRpgPanel,
+  drawStatBar,
+  createRpgButton,
+} from '../ui/UiTheme.js';
 
 function hexToInt(hex, fallback = 0x38bdf8) {
   if (typeof hex === 'number') return hex;
@@ -56,7 +60,7 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   create() {
-    this.add.rectangle(320, 180, 640, 360, 0x090e1a).setDepth(0);
+    this.add.rectangle(320, 180, 640, 360, 0x070c18).setDepth(0);
 
     this._buildTopBar();
     this._buildBottomActionBar();
@@ -70,44 +74,49 @@ export class WorldMapScene extends Phaser.Scene {
   _buildTopBar() {
     // Top Bar (y: 0..34, w: 640)
     const g = this.add.graphics().setDepth(20);
-    g.fillStyle(0x0b1222, 0.98);
+    g.fillStyle(0x070c18, 0.98);
     g.fillRect(0, 0, 640, 34);
-    g.fillStyle(0x263554, 1);
+    g.fillStyle(0x3b527a, 1);
     g.fillRect(0, 32, 640, 2);
+    g.fillStyle(0xffffff, 0.08);
+    g.fillRect(0, 0, 640, 1);
 
     this.add
       .text(10, 17, 'CAMPAIGN MAP', {
-        fontFamily: FONT,
-        fontSize: '11px',
+        fontFamily: FONTS.display,
+        fontSize: '9px',
         fontStyle: 'bold',
         color: '#f8fafc',
       })
       .setOrigin(0, 0.5)
       .setDepth(21);
 
-    // Inline 4 Chapter tabs (CH.1 - CH.4)
+    // Inline 4 Beveled Chapter tabs (CH.1 - CH.4)
     const tabW = 54;
-    const tabH = 24;
+    const tabH = 22;
     const gap = 4;
     const startX = 114;
     const tabY = 5;
 
     this.tabRefs = CHAPTERS.slice(0, 4).map((ch, idx) => {
       const x = startX + idx * (tabW + gap);
+      const cx = x + tabW / 2;
+      const cy = tabY + tabH / 2;
       const accentInt = hexToInt(ch.accent, 0x38bdf8);
 
+      this.add.rectangle(cx, cy + 2, tabW, tabH, 0x04070f).setDepth(20);
       const bg = this.add
-        .rectangle(x + tabW / 2, tabY + tabH / 2, tabW, tabH, 0x131c31)
+        .rectangle(cx, cy, tabW, tabH, 0x131c31)
         .setStrokeStyle(1, 0x263554)
         .setInteractive({ useHandCursor: true })
         .setDepth(21);
-
-      const bar = this.add.rectangle(x + tabW / 2, tabY + 2, tabW - 4, 3, accentInt).setDepth(22);
+      const shine = this.add.rectangle(cx, tabY + 2, tabW - 4, 2, 0xffffff, 0.14).setDepth(22);
+      const bar = this.add.rectangle(cx, tabY + tabH - 2, tabW - 4, 3, accentInt).setDepth(22);
 
       const label = this.add
-        .text(x + tabW / 2, tabY + tabH / 2 + 1, `CH.${ch.id}`, {
-          fontFamily: FONT,
-          fontSize: '10px',
+        .text(cx, cy, `CH.${ch.id}`, {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           fontStyle: 'bold',
           color: '#94a3b8',
         })
@@ -122,7 +131,7 @@ export class WorldMapScene extends Phaser.Scene {
         this._renderChapterMap();
       });
 
-      return { ch, accentInt, bg, bar, label };
+      return { ch, accentInt, bg, shine, bar, label };
     });
 
     this._refreshTabs();
@@ -132,9 +141,9 @@ export class WorldMapScene extends Phaser.Scene {
     const pct = Math.min(100, Math.round((gameState.completedNodeIds.length / totalNodes) * 100));
 
     this.goldText = this.add
-      .text(420, 17, `${gameState.gold}G`, {
-        fontFamily: FONT,
-        fontSize: '11px',
+      .text(418, 17, `${gameState.gold}G`, {
+        fontFamily: FONTS.display,
+        fontSize: '9px',
         fontStyle: 'bold',
         color: '#fbbf24',
       })
@@ -143,8 +152,8 @@ export class WorldMapScene extends Phaser.Scene {
 
     this.progressText = this.add
       .text(468, 17, `${pct}%`, {
-        fontFamily: FONT,
-        fontSize: '11px',
+        fontFamily: FONTS.display,
+        fontSize: '9px',
         fontStyle: 'bold',
         color: '#34d399',
       })
@@ -152,63 +161,48 @@ export class WorldMapScene extends Phaser.Scene {
       .setDepth(21);
 
     // Audio mute toggle
-    const audioBg = this.add
-      .rectangle(522, 17, 68, 22, 0x162440)
-      .setStrokeStyle(1, 0x38bdf8)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(21);
-
-    const audioTxt = this.add
-      .text(522, 17, 'SFX ON', {
-        fontFamily: FONT,
-        fontSize: '9px',
-        fontStyle: 'bold',
-        color: '#7dd3fc',
-      })
-      .setOrigin(0.5)
-      .setDepth(22);
-
     const syncAudio = () => {
       const muted = audioManager.isMuted();
-      audioBg.setFillStyle(muted ? 0x291522 : 0x162440);
-      audioBg.setStrokeStyle(1, muted ? 0xef4444 : 0x38bdf8);
-      audioTxt.setText(muted ? 'MUTED' : 'SFX ON');
-      audioTxt.setColor(muted ? '#fca5a5' : '#7dd3fc');
+      this.audioBtn.setStyle(muted ? 0x291522 : 0x162440, muted ? 0xef4444 : 0x38bdf8, muted ? '#fca5a5' : '#7dd3fc');
+      this.audioBtn.setLabel(muted ? 'MUTED' : 'SFX ON');
     };
-
-    audioBg.on('pointerdown', () => {
-      audioManager.unlock();
-      audioManager.toggleMute();
-      syncAudio();
-      if (!audioManager.isMuted()) {
-        audioManager.playSfx('click');
-        audioManager.playBgm('map');
-      }
+    this.audioBtn = createRpgButton(this, 520, 16, 68, 21, {
+      label: 'SFX ON',
+      fill: 0x162440,
+      hover: 0x1e3358,
+      border: 0x38bdf8,
+      lip: 0x04070f,
+      textColor: '#7dd3fc',
+      fontSize: '7px',
+      fontFamily: FONTS.display,
+      depth: 21,
+      onClick: () => {
+        audioManager.unlock();
+        audioManager.toggleMute();
+        syncAudio();
+        if (!audioManager.isMuted()) {
+          audioManager.playSfx('click');
+          audioManager.playBgm('map');
+        }
+      },
     });
     syncAudio();
 
     // TITLE button
-    const titleBtn = this.add
-      .rectangle(598, 17, 64, 22, 0x1e293b)
-      .setStrokeStyle(1, 0x475569)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(21);
-
-    this.add
-      .text(598, 17, 'TITLE', {
-        fontFamily: FONT,
-        fontSize: '10px',
-        fontStyle: 'bold',
-        color: '#e2e8f0',
-      })
-      .setOrigin(0.5)
-      .setDepth(22);
-
-    titleBtn.on('pointerover', () => titleBtn.setFillStyle(0x334155));
-    titleBtn.on('pointerout', () => titleBtn.setFillStyle(0x1e293b));
-    titleBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this.scene.start('TitleScene');
+    createRpgButton(this, 598, 16, 66, 21, {
+      label: 'TITLE',
+      fill: 0x1e293b,
+      hover: 0x334155,
+      border: 0x64748b,
+      lip: 0x04070f,
+      textColor: '#e2e8f0',
+      fontSize: '8px',
+      fontFamily: FONTS.display,
+      depth: 21,
+      onClick: () => {
+        audioManager.playSfx('click');
+        this.scene.start('TitleScene');
+      },
     });
   }
 
@@ -219,6 +213,7 @@ export class WorldMapScene extends Phaser.Scene {
       tab.bg.setStrokeStyle(1, active ? tab.accentInt : 0x24314a);
       tab.label.setColor(active ? '#ffffff' : '#64748b');
       tab.bar.setAlpha(active ? 1 : 0.35);
+      tab.shine.setAlpha(active ? 0.22 : 0.08);
     });
   }
 
@@ -249,32 +244,40 @@ export class WorldMapScene extends Phaser.Scene {
     }
 
     // Tasteful dark scrim
-    const scrim = this.add.rectangle(320, mapCenterY, 640, mapH, 0x060b16, 0.58);
+    const scrim = this.add.rectangle(320, mapCenterY, 640, mapH, 0x060b16, 0.56);
     this.mapContainer.add(scrim);
 
-    // Chapter title banner top-left (x: 10, y: 42, w: 244, h: 30)
-    const bannerBg = this.add.rectangle(132, 57, 244, 30, 0x0b1222, 0.92).setStrokeStyle(1, accentInt);
-    const bannerStripe = this.add.rectangle(13, 57, 4, 26, accentInt);
+    // Beveled Chapter title banner top-left (x: 10, y: 42, w: 256, h: 34)
+    const bannerGfx = drawRpgPanel(this, 10, 42, 256, 34, {
+      fill: 0x0c1426,
+      alpha: 0.94,
+      border: accentInt,
+      outer: 0x04070f,
+      depth: 6,
+      rivets: false,
+    });
+    const bannerStripe = this.add.rectangle(14, 59, 4, 28, accentInt);
     const bannerTitle = this.add.text(22, 46, `CH.${chapter.id} — ${chapter.name}`, {
-      fontFamily: FONT,
-      fontSize: '11px',
+      fontFamily: FONTS.display,
+      fontSize: '9px',
       fontStyle: 'bold',
       color: '#f8fafc',
     });
     const bannerSub = this.add.text(22, 60, chapter.subtitle ?? '', {
-      fontFamily: FONT,
-      fontSize: '9px',
+      fontFamily: FONTS.ui,
+      fontSize: '10px',
+      fontStyle: 'bold',
       color: chapter.accent ?? '#38bdf8',
     });
-    this.mapContainer.add([bannerBg, bannerStripe, bannerTitle, bannerSub]);
+    this.mapContainer.add([bannerGfx, bannerStripe, bannerTitle, bannerSub]);
 
     const nodes = [...getNodesByChapter(this.activeChapter)].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 
     if (nodes.length === 0) {
       const emptyTxt = this.add
         .text(320, mapCenterY, 'Chapter ini belum memiliki stage.\nSelesaikan chapter sebelumnya!', {
-          fontFamily: FONT,
-          fontSize: '11px',
+          fontFamily: FONTS.ui,
+          fontSize: '12px',
           color: '#94a3b8',
           align: 'center',
         })
@@ -283,8 +286,6 @@ export class WorldMapScene extends Phaser.Scene {
       return;
     }
 
-    // Position nodes left-to-right; if campaign.js still carries legacy portrait y (> 274),
-    // gracefully map them across the wide 640x360 canvas, always clamped to x: 70..570, y: 78..244.
     const hasLegacyPortraitCoords = nodes.some((n) => (n.mapPos?.y ?? 0) > 274);
     const fallbackXs = [132, 320, 508];
     const fallbackYs = [196, 134, 174];
@@ -397,8 +398,8 @@ export class WorldMapScene extends Phaser.Scene {
       } else if (cleared) {
         const checkTxt = this.add
           .text(x, y, '✓', {
-            fontFamily: FONT,
-            fontSize: isBoss ? '17px' : '15px',
+            fontFamily: FONTS.display,
+            fontSize: isBoss ? '15px' : '13px',
             fontStyle: 'bold',
             color: '#6ee7b7',
           })
@@ -407,8 +408,8 @@ export class WorldMapScene extends Phaser.Scene {
       } else {
         const numTxt = this.add
           .text(x, y, `${node.index ?? 1}`, {
-            fontFamily: FONT,
-            fontSize: isBoss ? '15px' : '13px',
+            fontFamily: FONTS.display,
+            fontSize: isBoss ? '13px' : '11px',
             fontStyle: 'bold',
             color: '#ffffff',
           })
@@ -416,14 +417,14 @@ export class WorldMapScene extends Phaser.Scene {
         this.mapContainer.add(numTxt);
       }
 
-      // OPEN / BOSS / CLEARED status tag above pin
+      // OPEN / BOSS tag above pin
       if (isCurrent) {
         const tagY = y - radius - (isBoss ? 17 : 11);
-        const tagBg = this.add.rectangle(x, tagY, 44, 14, isBoss ? 0xef4444 : accentInt);
+        const tagBg = this.add.rectangle(x, tagY, 46, 14, isBoss ? 0xef4444 : accentInt);
         const tagTxt = this.add
           .text(x, tagY, isBoss ? 'BOSS' : 'OPEN', {
-            fontFamily: FONT,
-            fontSize: '8px',
+            fontFamily: FONTS.display,
+            fontSize: '7px',
             fontStyle: 'bold',
             color: '#070b14',
           })
@@ -433,12 +434,12 @@ export class WorldMapScene extends Phaser.Scene {
 
       // Node title pill below pin
       const labelY = Math.min(262, y + radius + 14);
-      const pillW = Math.min(148, node.title.length * 6.5 + 18);
-      const labelBg = this.add.rectangle(x, labelY, pillW, 16, 0x090e1a, 0.9);
+      const pillW = Math.min(156, node.title.length * 6.8 + 20);
+      const labelBg = this.add.rectangle(x, labelY, pillW, 17, 0x090e1a, 0.92).setStrokeStyle(1, unlocked ? 0x3b527a : 0x1e293b);
       const labelTxt = this.add
         .text(x, labelY, node.title, {
-          fontFamily: FONT,
-          fontSize: '9px',
+          fontFamily: FONTS.ui,
+          fontSize: '10px',
           fontStyle: 'bold',
           color: unlocked ? '#f8fafc' : '#64748b',
         })
@@ -459,7 +460,7 @@ export class WorldMapScene extends Phaser.Scene {
     this._hidePreviewCard();
 
     const enemyDef = MONSTERS[node.enemyId] ?? MONSTERS.verdantix;
-    const enemyMeta = ELEMENT_META[enemyDef.element] ?? ELEMENT_META[0];
+    const enemyMeta = ELEMENT_STYLE[enemyDef.element] ?? ELEMENT_STYLE[0];
     const typeLabel = (node.type ?? 'wild').toUpperCase();
     const typeColor = typeLabel === 'BOSS' ? 0xef4444 : typeLabel === 'RIVAL' ? 0xf59e0b : 0x22c55e;
     const cleared = gameState.completedNodeIds.includes(node.id);
@@ -467,49 +468,56 @@ export class WorldMapScene extends Phaser.Scene {
     this.previewContainer = this.add.container(0, 0).setDepth(60);
 
     // Dismiss backdrop
-    const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.62).setInteractive();
+    const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.68).setInteractive();
     dim.on('pointerdown', () => this._hidePreviewCard());
 
-    const cardW = 392;
-    const cardH = 196;
+    const cardW = 404;
+    const cardH = 202;
     const cx = 320;
     const cy = 176;
     const left = cx - cardW / 2;
     const top = cy - cardH / 2;
 
-    const panel = this.add.rectangle(cx, cy, cardW, cardH, 0x111a2e).setStrokeStyle(2, typeColor).setInteractive();
-    const topBar = this.add.rectangle(cx, top + 3, cardW - 4, 6, typeColor);
-
-    // Close button
-    const closeBtn = this.add
-      .rectangle(left + cardW - 22, top + 24, 26, 24, 0x1e293b)
-      .setStrokeStyle(1, 0x475569)
-      .setInteractive({ useHandCursor: true });
-    const closeTxt = this.add
-      .text(left + cardW - 22, top + 24, 'X', {
-        fontFamily: FONT,
-        fontSize: '11px',
-        fontStyle: 'bold',
-        color: '#e2e8f0',
-      })
-      .setOrigin(0.5);
-    closeBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this._hidePreviewCard();
+    const panelHit = this.add.rectangle(cx, cy, cardW, cardH, 0x0c1426, 0.01).setInteractive();
+    const panelGfx = drawRpgPanel(this, left, top, cardW, cardH, {
+      fill: 0x0c1426,
+      alpha: 0.98,
+      border: typeColor,
+      outer: 0x04070f,
+      accent: typeColor,
+      depth: 61,
+      rivets: true,
     });
 
-    // Enemy sprite preview
-    const spriteBg = this.add.rectangle(left + 56, top + 76, 78, 78, 0x090e1a).setStrokeStyle(2, enemyMeta.color);
+    // Close button
+    const closeBtn = createRpgButton(this, left + cardW - 22, top + 24, 26, 22, {
+      label: 'X',
+      fill: 0x1e293b,
+      hover: 0x334155,
+      border: 0x64748b,
+      lip: 0x04070f,
+      textColor: '#f8fafc',
+      fontSize: '9px',
+      fontFamily: FONTS.display,
+      depth: 62,
+      onClick: () => {
+        audioManager.playSfx('click');
+        this._hidePreviewCard();
+      },
+    });
+
+    // Enemy sprite preview frame
+    const spriteBg = this.add.rectangle(left + 58, top + 78, 80, 80, 0x09111f).setStrokeStyle(2, enemyMeta.color);
     const texKey = getMonsterTextureKey(node.enemyId, 0);
     const enemyImg = this.add
-      .image(left + 56, top + 76, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-      .setScale(1.18);
+      .image(left + 58, top + 78, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+      .setScale(1.12);
 
     // Stage & Enemy Info
-    const infoX = left + 108;
+    const infoX = left + 112;
     const stageTxt = this.add.text(infoX, top + 16, `CH.${node.chapter} • ${node.title}`, {
-      fontFamily: FONT,
-      fontSize: '12px',
+      fontFamily: FONTS.display,
+      fontSize: '10px',
       fontStyle: 'bold',
       color: '#f8fafc',
     });
@@ -517,30 +525,35 @@ export class WorldMapScene extends Phaser.Scene {
     const typeBg = this.add.rectangle(infoX + 28, top + 42, 56, 16, typeColor);
     const typeTxt = this.add
       .text(infoX + 28, top + 42, typeLabel, {
-        fontFamily: FONT,
-        fontSize: '9px',
+        fontFamily: FONTS.display,
+        fontSize: '7px',
         fontStyle: 'bold',
         color: '#070b14',
       })
       .setOrigin(0.5);
 
+    const extraBadges = [];
+    const hasIcon = enemyMeta.iconKey && this.textures.exists(enemyMeta.iconKey);
+    if (hasIcon) {
+      extraBadges.push(this.add.image(infoX + 68, top + 42, enemyMeta.iconKey).setDisplaySize(12, 12));
+    }
     const statusBadge = cleared
-      ? this.add.text(infoX + 64, top + 36, 'CLEARED (REPLAY)', {
-          fontFamily: FONT,
-          fontSize: '9px',
+      ? this.add.text(infoX + (hasIcon ? 78 : 64), top + 36, 'CLEARED (REPLAY)', {
+          fontFamily: FONTS.display,
+          fontSize: '7px',
           fontStyle: 'bold',
           color: '#34d399',
         })
-      : this.add.text(infoX + 64, top + 36, enemyMeta.label, {
-          fontFamily: FONT,
-          fontSize: '9px',
+      : this.add.text(infoX + (hasIcon ? 78 : 64), top + 36, enemyMeta.label, {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           fontStyle: 'bold',
           color: enemyMeta.hex,
         });
 
     const enemyTxt = this.add.text(infoX, top + 58, `${enemyDef.name}  Lv.${node.enemyLevel}`, {
-      fontFamily: FONT,
-      fontSize: '13px',
+      fontFamily: FONTS.display,
+      fontSize: '11px',
       fontStyle: 'bold',
       color: '#fde047',
     });
@@ -549,63 +562,58 @@ export class WorldMapScene extends Phaser.Scene {
     const itemEntries = Object.entries(node.itemRewards ?? {});
     const itemStr =
       itemEntries.length > 0
-        ? '  ' + itemEntries.map(([k, v]) => `+${v} ${k.replace('_', ' ')}`).join(', ')
+        ? ' • ' + itemEntries.map(([k, v]) => `+${v} ${k.replace('_', ' ')}`).join(', ')
         : '';
     const rewardTxt = this.add.text(
       infoX,
-      top + 80,
+      top + 82,
       `REWARD: +${node.xpReward ?? 50} XP  +${node.goldReward ?? 30}G${itemStr}`,
       {
-        fontFamily: FONT,
-        fontSize: '9px',
+        fontFamily: FONTS.ui,
+        fontSize: '10px',
+        fontStyle: 'bold',
         color: '#cbd5e1',
-        wordWrap: { width: 266 },
+        wordWrap: { width: 274 },
       }
     );
 
-    // Start Battle button
-    const startBtn = this.add
-      .rectangle(cx, top + cardH - 32, 344, 42, 0x10b981)
-      .setStrokeStyle(2, 0xa7f3d0)
-      .setInteractive({ useHandCursor: true });
-
-    const startTxt = this.add
-      .text(cx, top + cardH - 32, 'MULAI PERTARUNGAN', {
-        fontFamily: FONT,
-        fontSize: '14px',
-        fontStyle: 'bold',
-        color: '#052e16',
-      })
-      .setOrigin(0.5);
-
-    startBtn.on('pointerover', () => startBtn.setFillStyle(0x34d399));
-    startBtn.on('pointerout', () => startBtn.setFillStyle(0x10b981));
-    startBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this._hidePreviewCard();
-      this.scene.start('BattleScene', {
-        mode: 'campaign',
-        nodeId: node.id,
-        runtime: battleBridge.runtime,
-      });
+    // Start Battle tactile 3D button
+    const startBtn = createRpgButton(this, cx, top + cardH - 32, 352, 40, {
+      label: 'MULAI PERTARUNGAN',
+      fill: 0x10b981,
+      hover: 0x34d399,
+      border: 0xa7f3d0,
+      lip: 0x064e3b,
+      textColor: '#052e16',
+      fontSize: '11px',
+      fontFamily: FONTS.display,
+      depth: 62,
+      onClick: () => {
+        audioManager.playSfx('click');
+        this._hidePreviewCard();
+        this.scene.start('BattleScene', {
+          mode: 'campaign',
+          nodeId: node.id,
+          runtime: battleBridge.runtime,
+        });
+      },
     });
 
     this.previewContainer.add([
       dim,
-      panel,
-      topBar,
-      closeBtn,
-      closeTxt,
+      panelHit,
+      panelGfx,
+      closeBtn.container,
       spriteBg,
       enemyImg,
       stageTxt,
       typeBg,
       typeTxt,
+      ...extraBadges,
       statusBadge,
       enemyTxt,
       rewardTxt,
-      startBtn,
-      startTxt,
+      startBtn.container,
     ]);
   }
 
@@ -632,20 +640,21 @@ export class WorldMapScene extends Phaser.Scene {
   _buildBottomActionBar() {
     // Bottom Bar (y: 274..360, height 86)
     const g = this.add.graphics().setDepth(20);
-    g.fillStyle(0x0a101f, 1);
+    g.fillStyle(0x070c18, 1);
     g.fillRect(0, 274, 640, 86);
-    g.fillStyle(0x263554, 1);
+    g.fillStyle(0x3b527a, 1);
     g.fillRect(0, 274, 640, 2);
 
-    // 2x2 thumb-friendly action buttons alongside Party strip (x: 456..632, y: 282..352)
+    // 2x2 tactile 3D beveled action buttons alongside Party strip (x: 456..632, y: 282..352)
     const buttons = [
       {
         label: 'HEAL',
         x: 498,
-        y: 298,
+        y: 297,
         fill: 0x065f46,
         hover: 0x047857,
-        stroke: 0x34d399,
+        border: 0x34d399,
+        lip: 0x022c22,
         textColor: '#ecfdf5',
         onClick: () => {
           audioManager.playSfx('heal');
@@ -657,10 +666,11 @@ export class WorldMapScene extends Phaser.Scene {
       {
         label: 'SHOP',
         x: 590,
-        y: 298,
+        y: 297,
         fill: 0x78350f,
         hover: 0x92400e,
-        stroke: 0xfbbf24,
+        border: 0xfbbf24,
+        lip: 0x451a03,
         textColor: '#fef3c7',
         onClick: () => {
           audioManager.playSfx('click');
@@ -673,7 +683,8 @@ export class WorldMapScene extends Phaser.Scene {
         y: 336,
         fill: 0x4c1d95,
         hover: 0x5b21b6,
-        stroke: 0xc084fc,
+        border: 0xc084fc,
+        lip: 0x2e1065,
         textColor: '#f3e8ff',
         onClick: () => {
           audioManager.playSfx('click');
@@ -686,7 +697,8 @@ export class WorldMapScene extends Phaser.Scene {
         y: 336,
         fill: 0x1e293b,
         hover: 0x334155,
-        stroke: 0x38bdf8,
+        border: 0x38bdf8,
+        lip: 0x090f1d,
         textColor: '#e0f2fe',
         onClick: () => {
           audioManager.playSfx('click');
@@ -697,25 +709,18 @@ export class WorldMapScene extends Phaser.Scene {
     ];
 
     buttons.forEach((b) => {
-      const btn = this.add
-        .rectangle(b.x, b.y, 84, 32, b.fill)
-        .setStrokeStyle(2, b.stroke)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(22);
-
-      this.add
-        .text(b.x, b.y, b.label, {
-          fontFamily: FONT,
-          fontSize: '11px',
-          fontStyle: 'bold',
-          color: b.textColor,
-        })
-        .setOrigin(0.5)
-        .setDepth(23);
-
-      btn.on('pointerover', () => btn.setFillStyle(b.hover));
-      btn.on('pointerout', () => btn.setFillStyle(b.fill));
-      btn.on('pointerdown', b.onClick);
+      createRpgButton(this, b.x, b.y, 84, 30, {
+        label: b.label,
+        fill: b.fill,
+        hover: b.hover,
+        border: b.border,
+        lip: b.lip,
+        textColor: b.textColor,
+        fontSize: '9px',
+        fontFamily: FONTS.display,
+        depth: 22,
+        onClick: b.onClick,
+      });
     });
   }
 
@@ -739,66 +744,83 @@ export class WorldMapScene extends Phaser.Scene {
       const mon = gameState.party[i];
 
       if (!mon) {
-        const emptyBg = this.add
-          .rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, 0x0f172a)
-          .setStrokeStyle(1, 0x1e293b);
+        const emptyPanel = drawRpgPanel(this, x, y, slotW, slotH, {
+          fill: 0x0b1222,
+          alpha: 0.9,
+          border: 0x1e293b,
+          outer: 0x04070f,
+          depth: 22,
+          rivets: false,
+        });
         const emptyTxt = this.add
           .text(x + slotW / 2, y + slotH / 2, 'EMPTY SLOT', {
-            fontFamily: FONT,
-            fontSize: '10px',
+            fontFamily: FONTS.display,
+            fontSize: '8px',
             color: '#475569',
           })
           .setOrigin(0.5);
-        this.partyStripContainer.add([emptyBg, emptyTxt]);
+        this.partyStripContainer.add([emptyPanel, emptyTxt]);
         continue;
       }
 
-      const meta = ELEMENT_META[mon.element] ?? ELEMENT_META[0];
+      const meta = ELEMENT_STYLE[mon.element] ?? ELEMENT_STYLE[0];
       const ratio = mon.currentHp / Math.max(1, mon.maxHp);
       const isLead = i === 0;
 
-      const bg = this.add
-        .rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, isLead ? 0x162440 : 0x111a2e)
-        .setStrokeStyle(isLead ? 2 : 1, isLead ? meta.color : 0x2e3c59)
+      const panelGfx = drawRpgPanel(this, x, y, slotW, slotH, {
+        fill: isLead ? 0x13203b : 0x0c1426,
+        alpha: 0.96,
+        border: isLead ? meta.color : 0x3b527a,
+        outer: 0x04070f,
+        depth: 22,
+        rivets: false,
+      });
+
+      const hit = this.add
+        .rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, 0x000000, 0.001)
         .setInteractive({ useHandCursor: true });
-      bg.on('pointerdown', () => {
+      hit.on('pointerdown', () => {
         audioManager.playSfx('click');
         this._showPartyModal();
       });
 
       const texKey = getMonsterTextureKey(mon.id, 0);
       const sprite = this.add
-        .image(x + 24, y + 26, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(0.68);
+        .image(x + 24, y + 25, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .setScale(0.62);
 
-      const nameTxt = this.add.text(x + 48, y + 8, mon.name.slice(0, 10), {
-        fontFamily: FONT,
-        fontSize: '10px',
+      const parts = [panelGfx, hit, sprite];
+
+      if (meta.iconKey && this.textures.exists(meta.iconKey)) {
+        parts.push(this.add.image(x + slotW - 12, y + 14, meta.iconKey).setDisplaySize(11, 11));
+      }
+
+      const nameTxt = this.add.text(x + 48, y + 7, mon.name.slice(0, 9), {
+        fontFamily: FONTS.ui,
+        fontSize: '11px',
         fontStyle: 'bold',
         color: '#f8fafc',
       });
 
       const lvTxt = this.add.text(x + 48, y + 22, `Lv.${mon.level}${isLead ? ' ★' : ''}`, {
-        fontFamily: FONT,
-        fontSize: '9px',
+        fontFamily: FONTS.display,
+        fontSize: '8px',
         color: isLead ? '#fde047' : '#94a3b8',
       });
 
-      const barW = 122;
-      const track = this.add.rectangle(x + 9, y + 48, barW, 7, 0x090e1a).setOrigin(0, 0.5);
-      const fill = this.add
-        .rectangle(x + 10, y + 48, Math.round((barW - 2) * Math.max(0, Math.min(1, ratio))), 5, hpBarColor(ratio))
-        .setOrigin(0, 0.5);
+      const barGfx = this.add.graphics();
+      drawStatBar(barGfx, x + 9, y + 45, 122, 6, ratio, hpBarColor(ratio));
 
       const hpTxt = this.add
-        .text(x + slotW - 9, y + 60, `${mon.currentHp}/${mon.maxHp}`, {
-          fontFamily: FONT,
-          fontSize: '8px',
+        .text(x + slotW - 9, y + 59, `${mon.currentHp}/${mon.maxHp}`, {
+          fontFamily: FONTS.display,
+          fontSize: '7px',
           color: '#cbd5e1',
         })
         .setOrigin(1, 0.5);
 
-      this.partyStripContainer.add([bg, sprite, nameTxt, lvTxt, track, fill, hpTxt]);
+      parts.push(nameTxt, lvTxt, barGfx, hpTxt);
+      this.partyStripContainer.add(parts);
     }
   }
 
@@ -809,57 +831,66 @@ export class WorldMapScene extends Phaser.Scene {
     const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.8).setInteractive();
     dim.on('pointerdown', () => this._hideShopModal());
 
-    const panelW = 540;
-    const panelH = 278;
+    const panelW = 548;
+    const panelH = 282;
     const cx = 320;
     const cy = 180;
     const left = cx - panelW / 2;
     const top = cy - panelH / 2;
 
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0xfbbf24).setInteractive();
+    const panelHit = this.add.rectangle(cx, cy, panelW, panelH, 0x0c1426, 0.01).setInteractive();
+    const panelGfx = drawRpgPanel(this, left, top, panelW, panelH, {
+      fill: 0x0c1426,
+      alpha: 0.98,
+      border: 0xfbbf24,
+      outer: 0x04070f,
+      accent: 0xfbbf24,
+      depth: 71,
+      rivets: true,
+    });
+
     const title = this.add.text(left + 16, top + 12, 'SOLARA SHOP', {
-      fontFamily: FONT,
-      fontSize: '13px',
+      fontFamily: FONTS.display,
+      fontSize: '11px',
       fontStyle: 'bold',
       color: '#fde047',
     });
-    const sub = this.add.text(left + 16, top + 28, 'Beli Potion, Antidote & Orb Penangkap', {
-      fontFamily: FONT,
-      fontSize: '9px',
+    const sub = this.add.text(left + 16, top + 27, 'Beli Potion, Antidote & Orb Penangkap', {
+      fontFamily: FONTS.ui,
+      fontSize: '10px',
       color: '#94a3b8',
     });
 
-    const goldPill = this.add.rectangle(left + panelW - 96, top + 22, 100, 22, 0x1c1917).setStrokeStyle(1, 0xfbbf24);
+    const goldPill = this.add.rectangle(left + panelW - 98, top + 22, 104, 22, 0x1c1917).setStrokeStyle(1, 0xfbbf24);
     const goldTxt = this.add
-      .text(left + panelW - 96, top + 22, `GOLD: ${gameState.gold}G`, {
-        fontFamily: FONT,
-        fontSize: '10px',
+      .text(left + panelW - 98, top + 22, `GOLD: ${gameState.gold}G`, {
+        fontFamily: FONTS.display,
+        fontSize: '8px',
         fontStyle: 'bold',
         color: '#fbbf24',
       })
       .setOrigin(0.5);
 
-    const closeBtn = this.add
-      .rectangle(left + panelW - 24, top + 22, 26, 22, 0x1e293b)
-      .setStrokeStyle(1, 0x475569)
-      .setInteractive({ useHandCursor: true });
-    const closeTxt = this.add
-      .text(left + panelW - 24, top + 22, 'X', {
-        fontFamily: FONT,
-        fontSize: '11px',
-        fontStyle: 'bold',
-        color: '#f8fafc',
-      })
-      .setOrigin(0.5);
-    closeBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this._hideShopModal();
+    const closeBtn = createRpgButton(this, left + panelW - 24, top + 22, 26, 22, {
+      label: 'X',
+      fill: 0x1e293b,
+      hover: 0x334155,
+      border: 0x64748b,
+      lip: 0x04070f,
+      textColor: '#f8fafc',
+      fontSize: '9px',
+      fontFamily: FONTS.display,
+      depth: 72,
+      onClick: () => {
+        audioManager.playSfx('click');
+        this._hideShopModal();
+      },
     });
 
-    this.shopModalContainer.add([dim, panel, title, sub, goldPill, goldTxt, closeBtn, closeTxt]);
+    this.shopModalContainer.add([dim, panelHit, panelGfx, title, sub, goldPill, goldTxt, closeBtn.container]);
 
     const rowW = panelW - 32;
-    const rowH = 39;
+    const rowH = 40;
     const gapY = 5;
     const startY = top + 48;
 
@@ -870,26 +901,26 @@ export class WorldMapScene extends Phaser.Scene {
       const canAfford = gameState.gold >= item.price;
 
       const rowBg = this.add
-        .rectangle(rx + rowW / 2, ry + rowH / 2, rowW, rowH, 0x0f172a)
-        .setStrokeStyle(1, 0x263554);
+        .rectangle(rx + rowW / 2, ry + rowH / 2, rowW, rowH, 0x0f192e)
+        .setStrokeStyle(1, 0x2a3d61);
       const stripe = this.add.rectangle(rx + 4, ry + rowH / 2, 5, rowH - 4, item.color ?? 0x38bdf8);
 
       const nameTxt = this.add.text(rx + 14, ry + 5, `${item.name}  [${item.shortDesc}]`, {
-        fontFamily: FONT,
-        fontSize: '10px',
+        fontFamily: FONTS.ui,
+        fontSize: '11px',
         fontStyle: 'bold',
         color: '#f8fafc',
       });
       const descTxt = this.add.text(rx + 14, ry + 21, item.description ?? '', {
-        fontFamily: FONT,
-        fontSize: '8px',
+        fontFamily: FONTS.ui,
+        fontSize: '9px',
         color: '#94a3b8',
       });
 
       const ownedTxt = this.add
-        .text(rx + rowW - 144, ry + rowH / 2, `TAS: x${owned}`, {
-          fontFamily: FONT,
-          fontSize: '9px',
+        .text(rx + rowW - 148, ry + rowH / 2, `TAS: x${owned}`, {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           fontStyle: 'bold',
           color: '#7dd3fc',
         })
@@ -897,56 +928,48 @@ export class WorldMapScene extends Phaser.Scene {
 
       const priceTxt = this.add
         .text(rx + rowW - 86, ry + rowH / 2, `${item.price}G`, {
-          fontFamily: FONT,
-          fontSize: '11px',
+          fontFamily: FONTS.display,
+          fontSize: '9px',
           fontStyle: 'bold',
           color: canAfford ? '#fbbf24' : '#ef4444',
         })
         .setOrigin(1, 0.5);
 
-      const buyBtn = this.add
-        .rectangle(rx + rowW - 40, ry + rowH / 2, 66, 26, canAfford ? 0x059669 : 0x1e293b)
-        .setStrokeStyle(1, canAfford ? 0x34d399 : 0x475569)
-        .setInteractive({ useHandCursor: true });
-      const buyTxt = this.add
-        .text(rx + rowW - 40, ry + rowH / 2, 'BELI', {
-          fontFamily: FONT,
-          fontSize: '10px',
-          fontStyle: 'bold',
-          color: canAfford ? '#ecfdf5' : '#64748b',
-        })
-        .setOrigin(0.5);
+      const buyBtn = createRpgButton(this, rx + rowW - 40, ry + rowH / 2, 68, 26, {
+        label: 'BELI',
+        fill: canAfford ? 0x059669 : 0x1e293b,
+        hover: canAfford ? 0x10b981 : 0x1e293b,
+        border: canAfford ? 0x34d399 : 0x475569,
+        lip: 0x04070f,
+        textColor: canAfford ? '#ecfdf5' : '#64748b',
+        fontSize: '8px',
+        fontFamily: FONTS.display,
+        depth: 72,
+        onClick: () => {
+          let ok = false;
+          if (typeof gameState.buyItem === 'function') {
+            const res = gameState.buyItem(item.id, 1);
+            ok = typeof res === 'object' && res !== null ? Boolean(res.ok ?? res.success) : Boolean(res);
+          } else if (gameState.gold >= item.price) {
+            gameState.gold -= item.price;
+            gameState.bag[item.id] = (gameState.bag[item.id] ?? 0) + 1;
+            gameState.save?.();
+            ok = true;
+          }
 
-      buyBtn.on('pointerover', () => {
-        if (gameState.gold >= item.price) buyBtn.setFillStyle(0x10b981);
-      });
-      buyBtn.on('pointerout', () => {
-        buyBtn.setFillStyle(gameState.gold >= item.price ? 0x059669 : 0x1e293b);
-      });
-      buyBtn.on('pointerdown', () => {
-        let ok = false;
-        if (typeof gameState.buyItem === 'function') {
-          const res = gameState.buyItem(item.id, 1);
-          ok = typeof res === 'object' && res !== null ? Boolean(res.ok ?? res.success) : Boolean(res);
-        } else if (gameState.gold >= item.price) {
-          gameState.gold -= item.price;
-          gameState.bag[item.id] = (gameState.bag[item.id] ?? 0) + 1;
-          gameState.save?.();
-          ok = true;
-        }
-
-        if (ok) {
-          audioManager.playSfx('heal');
-          this._syncTopBarGold();
-          this._showShopModal();
-          this._showToast(`Membeli ${item.name}! (Sisa ${gameState.gold}G)`, '#4ade80');
-        } else {
-          audioManager.playSfx('miss');
-          this._showToast(`Gold tidak cukup! Butuh ${item.price}G.`, '#f87171');
-        }
+          if (ok) {
+            audioManager.playSfx('heal');
+            this._syncTopBarGold();
+            this._showShopModal();
+            this._showToast(`Membeli ${item.name}! (Sisa ${gameState.gold}G)`, '#4ade80');
+          } else {
+            audioManager.playSfx('miss');
+            this._showToast(`Gold tidak cukup! Butuh ${item.price}G.`, '#f87171');
+          }
+        },
       });
 
-      this.shopModalContainer.add([rowBg, stripe, nameTxt, descTxt, ownedTxt, priceTxt, buyBtn, buyTxt]);
+      this.shopModalContainer.add([rowBg, stripe, nameTxt, descTxt, ownedTxt, priceTxt, buyBtn.container]);
     });
   }
 
@@ -964,8 +987,8 @@ export class WorldMapScene extends Phaser.Scene {
     const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.82).setInteractive();
     dim.on('pointerdown', () => this._hideDexModal());
 
-    const panelW = 560;
-    const panelH = 286;
+    const panelW = 568;
+    const panelH = 290;
     const cx = 320;
     const cy = 180;
     const left = cx - panelW / 2;
@@ -987,43 +1010,52 @@ export class WorldMapScene extends Phaser.Scene {
       total: allMons.length,
     };
 
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0xc084fc).setInteractive();
+    const panelHit = this.add.rectangle(cx, cy, panelW, panelH, 0x0c1426, 0.01).setInteractive();
+    const panelGfx = drawRpgPanel(this, left, top, panelW, panelH, {
+      fill: 0x0c1426,
+      alpha: 0.98,
+      border: 0xc084fc,
+      outer: 0x04070f,
+      accent: 0xc084fc,
+      depth: 71,
+      rivets: true,
+    });
+
     const headerTxt = this.add.text(
       left + 16,
       top + 14,
       `MONSVERDEX • SEEN ${stats.seen ?? seenSet.size}/${stats.total ?? allMons.length} • CAUGHT ${stats.caught ?? caughtSet.size}/${stats.total ?? allMons.length}`,
       {
-        fontFamily: FONT,
-        fontSize: '12px',
+        fontFamily: FONTS.display,
+        fontSize: '9px',
         fontStyle: 'bold',
         color: '#e9d5ff',
       }
     );
 
-    const closeBtn = this.add
-      .rectangle(left + panelW - 24, top + 20, 26, 22, 0x1e293b)
-      .setStrokeStyle(1, 0x475569)
-      .setInteractive({ useHandCursor: true });
-    const closeTxt = this.add
-      .text(left + panelW - 24, top + 20, 'X', {
-        fontFamily: FONT,
-        fontSize: '11px',
-        fontStyle: 'bold',
-        color: '#f8fafc',
-      })
-      .setOrigin(0.5);
-    closeBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this._hideDexModal();
+    const closeBtn = createRpgButton(this, left + panelW - 24, top + 20, 26, 22, {
+      label: 'X',
+      fill: 0x1e293b,
+      hover: 0x334155,
+      border: 0x64748b,
+      lip: 0x04070f,
+      textColor: '#f8fafc',
+      fontSize: '9px',
+      fontFamily: FONTS.display,
+      depth: 72,
+      onClick: () => {
+        audioManager.playSfx('click');
+        this._hideDexModal();
+      },
     });
 
-    this.dexModalContainer.add([dim, panel, headerTxt, closeBtn, closeTxt]);
+    this.dexModalContainer.add([dim, panelHit, panelGfx, headerTxt, closeBtn.container]);
 
     // Left 4x3 grid of all 12 Monsvers
     const gridX = left + 14;
-    const gridY = top + 44;
+    const gridY = top + 42;
     const cellW = 62;
-    const cellH = 72;
+    const cellH = 74;
     const gapX = 6;
     const gapY = 6;
 
@@ -1035,6 +1067,7 @@ export class WorldMapScene extends Phaser.Scene {
       const isCaught = caughtSet.has(mon.id);
       const isSeen = isCaught || seenSet.has(mon.id);
       const isSelected = this.selectedDexId === mon.id;
+      const mMeta = ELEMENT_STYLE[mon.element] ?? ELEMENT_STYLE[0];
 
       const cellBg = this.add
         .rectangle(x + cellW / 2, y + cellH / 2, cellW, cellH, isSelected ? 0x1e2d4a : 0x0f172a)
@@ -1043,8 +1076,8 @@ export class WorldMapScene extends Phaser.Scene {
 
       const texKey = getMonsterTextureKey(mon.id, 0);
       const sp = this.add
-        .image(x + cellW / 2, y + 28, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(0.72);
+        .image(x + cellW / 2, y + 29, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .setScale(0.68);
       if (!isSeen) {
         sp.setTint(0x090e1a);
         sp.setAlpha(0.72);
@@ -1054,8 +1087,8 @@ export class WorldMapScene extends Phaser.Scene {
 
       const lbl = this.add
         .text(x + cellW / 2, y + cellH - 11, isSeen ? mon.name.slice(0, 9) : '???', {
-          fontFamily: FONT,
-          fontSize: '8px',
+          fontFamily: FONTS.ui,
+          fontSize: '9px',
           fontStyle: isSelected ? 'bold' : 'normal',
           color: isSeen ? '#f8fafc' : '#64748b',
         })
@@ -1070,35 +1103,43 @@ export class WorldMapScene extends Phaser.Scene {
 
       this.dexModalContainer.add([cellBg, sp, lbl]);
 
+      if (isSeen && mMeta.iconKey && this.textures.exists(mMeta.iconKey)) {
+        this.dexModalContainer.add(this.add.image(x + 9, y + 9, mMeta.iconKey).setDisplaySize(10, 10));
+      }
       if (isCaught) {
         const dot = this.add.circle(x + cellW - 8, y + 8, 4, 0x10b981).setStrokeStyle(1, 0xa7f3d0);
         this.dexModalContainer.add(dot);
       }
     });
 
-    // Right Detail Card (w: 254, h: 228)
+    // Right Detail Card (w: 262, h: 234) with icon_el_* badge & glossy drawStatBar bars
     const detX = left + 292;
-    const detY = top + 44;
-    const detW = 254;
-    const detH = 228;
+    const detY = top + 42;
+    const detW = 262;
+    const detH = 234;
     const sel = MONSTERS[this.selectedDexId] ?? allMons[0];
     const selCaught = caughtSet.has(sel.id);
     const selSeen = selCaught || seenSet.has(sel.id);
-    const meta = ELEMENT_META[sel.element] ?? ELEMENT_META[0];
+    const meta = ELEMENT_STYLE[sel.element] ?? ELEMENT_STYLE[0];
 
-    const detBg = this.add
-      .rectangle(detX + detW / 2, detY + detH / 2, detW, detH, 0x0f172a)
-      .setStrokeStyle(2, selSeen ? meta.color : 0x334155);
-    this.dexModalContainer.add(detBg);
+    const detPanel = drawRpgPanel(this, detX, detY, detW, detH, {
+      fill: 0x0f172a,
+      alpha: 0.98,
+      border: selSeen ? meta.color : 0x334155,
+      outer: 0x04070f,
+      depth: 71,
+      rivets: false,
+    });
+    this.dexModalContainer.add(detPanel);
 
     const spriteFrame = this.add
-      .rectangle(detX + 46, detY + 48, 72, 72, 0x090e1a)
+      .rectangle(detX + 44, detY + 46, 70, 70, 0x09111f)
       .setStrokeStyle(1, selSeen ? meta.color : 0x334155);
     const selTex0 = getMonsterTextureKey(sel.id, 0);
     const selTex1 = getMonsterTextureKey(sel.id, 1);
     const detSprite = this.add
-      .image(detX + 46, detY + 48, this.textures.exists(selTex0) ? selTex0 : 'particle_pixel')
-      .setScale(1.18);
+      .image(detX + 44, detY + 46, this.textures.exists(selTex0) ? selTex0 : 'particle_pixel')
+      .setScale(1.04);
     if (!selSeen) {
       detSprite.setTint(0x090e1a);
       detSprite.setAlpha(0.72);
@@ -1117,35 +1158,43 @@ export class WorldMapScene extends Phaser.Scene {
     }
     this.dexModalContainer.add([spriteFrame, detSprite]);
 
-    const infoX = detX + 90;
+    const infoX = detX + 86;
     const statusLabel = selCaught ? 'CAUGHT ★' : selSeen ? 'SEEN' : 'UNSEEN';
     const statusColor = selCaught ? '#34d399' : selSeen ? '#7dd3fc' : '#64748b';
 
-    const nameTxt = this.add.text(infoX, detY + 12, selSeen ? sel.name : '???', {
-      fontFamily: FONT,
-      fontSize: '13px',
+    const nameTxt = this.add.text(infoX, detY + 10, selSeen ? sel.name : '???', {
+      fontFamily: FONTS.display,
+      fontSize: '11px',
       fontStyle: 'bold',
       color: '#f8fafc',
     });
-    const titleTxt = this.add.text(infoX, detY + 29, selSeen ? (sel.title ?? '') : 'Belum Ditemukan', {
-      fontFamily: FONT,
-      fontSize: '9px',
+    const titleTxt = this.add.text(infoX, detY + 26, selSeen ? (sel.title ?? '') : 'Belum Ditemukan', {
+      fontFamily: FONTS.ui,
+      fontSize: '10px',
       color: '#94a3b8',
     });
 
-    const elPill = this.add.rectangle(infoX + 26, detY + 51, 52, 15, selSeen ? meta.bg : 0x1e293b);
+    const hasIcon = selSeen && meta.iconKey && this.textures.exists(meta.iconKey);
+    const elPill = this.add
+      .rectangle(infoX + 32, detY + 48, 64, 15, selSeen ? meta.bg : 0x1e293b)
+      .setStrokeStyle(1, selSeen ? meta.color : 0x334155);
+    const elParts = [elPill];
+    if (hasIcon) {
+      elParts.push(this.add.image(infoX + 10, detY + 48, meta.iconKey).setDisplaySize(11, 11));
+    }
     const elTxt = this.add
-      .text(infoX + 26, detY + 51, selSeen ? meta.label : '???', {
-        fontFamily: FONT,
-        fontSize: '8px',
+      .text(infoX + (hasIcon ? 38 : 32), detY + 48, selSeen ? meta.label : '???', {
+        fontFamily: FONTS.display,
+        fontSize: '7px',
         fontStyle: 'bold',
         color: selSeen ? meta.hex : '#64748b',
       })
       .setOrigin(0.5);
+    elParts.push(elTxt);
 
-    const stTxt = this.add.text(infoX + 60, detY + 46, statusLabel, {
-      fontFamily: FONT,
-      fontSize: '9px',
+    const stTxt = this.add.text(infoX + 70, detY + 43, statusLabel, {
+      fontFamily: FONTS.display,
+      fontSize: '7px',
       fontStyle: 'bold',
       color: statusColor,
     });
@@ -1155,48 +1204,78 @@ export class WorldMapScene extends Phaser.Scene {
       : sel.evolvesTo && MONSTERS[sel.evolvesTo]
         ? `Stage ${sel.stage ?? 1} → ${MONSTERS[sel.evolvesTo].name} (Lv.${sel.evolvesAt})`
         : `Stage ${sel.stage ?? 1} • Final Form`;
-    const evoTxt = this.add.text(infoX, detY + 67, evoStr, {
-      fontFamily: FONT,
-      fontSize: '8px',
+    const evoTxt = this.add.text(infoX, detY + 62, evoStr, {
+      fontFamily: FONTS.ui,
+      fontSize: '9px',
+      fontStyle: 'bold',
       color: '#fde047',
-      wordWrap: { width: 156 },
+      wordWrap: { width: 168 },
     });
 
-    const statsBar = this.add.rectangle(detX + detW / 2, detY + 104, detW - 20, 22, 0x16223a).setStrokeStyle(1, 0x263554);
-    const statsText = selSeen
-      ? `HP ${sel.baseHp}  ATK ${sel.baseAttack}  DEF ${sel.baseDefense}  SPD ${sel.baseSpeed}`
-      : 'HP ??   ATK ??   DEF ??   SPD ??';
-    const statsLbl = this.add
-      .text(detX + detW / 2, detY + 104, statsText, {
-        fontFamily: FONT,
-        fontSize: '9px',
-        fontStyle: 'bold',
-        color: selSeen ? '#e2e8f0' : '#64748b',
-      })
-      .setOrigin(0.5);
+    // Glossy 2x2 Stat Bars (HP, ATK, DEF, SPD) using drawStatBar
+    const statGfx = this.add.graphics();
+    const statDefs = [
+      { label: 'HP', val: sel.baseHp ?? 60, max: 140, col: 0x22c55e, colIdx: 0, rowIdx: 0 },
+      { label: 'ATK', val: sel.baseAttack ?? 20, max: 50, col: 0xf97316, colIdx: 1, rowIdx: 0 },
+      { label: 'DEF', val: sel.baseDefense ?? 18, max: 50, col: 0x38bdf8, colIdx: 0, rowIdx: 1 },
+      { label: 'SPD', val: sel.baseSpeed ?? 18, max: 50, col: 0xfacc15, colIdx: 1, rowIdx: 1 },
+    ];
+    const statLabelObjs = [];
+    statDefs.forEach((st) => {
+      const sx = detX + 12 + st.colIdx * 124;
+      const sy = detY + 90 + st.rowIdx * 18;
+      statLabelObjs.push(
+        this.add.text(sx, sy, st.label, {
+          fontFamily: FONTS.display,
+          fontSize: '7px',
+          fontStyle: 'bold',
+          color: '#94a3b8',
+        })
+      );
+      drawStatBar(statGfx, sx + 26, sy + 1, 64, 7, selSeen ? st.val / st.max : 0, st.col);
+      statLabelObjs.push(
+        this.add
+          .text(sx + 114, sy, selSeen ? `${st.val}` : '??', {
+            fontFamily: FONTS.display,
+            fontSize: '7px',
+            color: selSeen ? '#e2e8f0' : '#475569',
+          })
+          .setOrigin(1, 0)
+      );
+    });
 
-    const bioHeading = this.add.text(detX + 12, detY + 124, 'LORE / CATATAN RISET:', {
-      fontFamily: FONT,
-      fontSize: '8px',
+    const bioHeading = this.add.text(detX + 12, detY + 132, 'LORE / CATATAN RISET:', {
+      fontFamily: FONTS.display,
+      fontSize: '7px',
       fontStyle: 'bold',
       color: '#c084fc',
     });
     const bioTxt = this.add.text(
       detX + 12,
-      detY + 138,
+      detY + 146,
       selSeen
         ? (sel.bio ?? 'Data ekosistem belum lengkap.')
         : 'Temui Monsver ini di pertarungan Campaign untuk membuka data & catatan risetnya.',
       {
-        fontFamily: FONT,
-        fontSize: '9px',
+        fontFamily: FONTS.ui,
+        fontSize: '10px',
         color: '#cbd5e1',
         lineSpacing: 3,
         wordWrap: { width: detW - 24 },
       }
     );
 
-    this.dexModalContainer.add([nameTxt, titleTxt, elPill, elTxt, stTxt, evoTxt, statsBar, statsLbl, bioHeading, bioTxt]);
+    this.dexModalContainer.add([
+      nameTxt,
+      titleTxt,
+      ...elParts,
+      stTxt,
+      evoTxt,
+      statGfx,
+      ...statLabelObjs,
+      bioHeading,
+      bioTxt,
+    ]);
   }
 
   _hideDexModal() {
@@ -1218,8 +1297,8 @@ export class WorldMapScene extends Phaser.Scene {
     const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.8).setInteractive();
     dim.on('pointerdown', () => this._hidePartyModal());
 
-    const panelW = 568;
-    const panelH = 284;
+    const panelW = 572;
+    const panelH = 286;
     const cx = 320;
     const cy = 180;
     const left = cx - panelW / 2;
@@ -1228,66 +1307,72 @@ export class WorldMapScene extends Phaser.Scene {
     const storageList = gameState.storage ?? [];
     const isPartyTab = this.partyModalTab !== 'storage';
 
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0x38bdf8).setInteractive();
+    const panelHit = this.add.rectangle(cx, cy, panelW, panelH, 0x0c1426, 0.01).setInteractive();
+    const panelGfx = drawRpgPanel(this, left, top, panelW, panelH, {
+      fill: 0x0c1426,
+      alpha: 0.98,
+      border: 0x38bdf8,
+      outer: 0x04070f,
+      accent: 0x38bdf8,
+      depth: 71,
+      rivets: true,
+    });
 
     // Toggle tabs: ACTIVE PARTY (x/3) | RIFT STORAGE (n)
-    const tab1Bg = this.add
-      .rectangle(left + 112, top + 24, 192, 26, isPartyTab ? 0x1d4ed8 : 0x0f172a)
-      .setStrokeStyle(2, isPartyTab ? 0x60a5fa : 0x334155)
-      .setInteractive({ useHandCursor: true });
-    const tab1Txt = this.add
-      .text(left + 112, top + 24, `ACTIVE PARTY (${gameState.party.length}/3)`, {
-        fontFamily: FONT,
-        fontSize: '10px',
-        fontStyle: 'bold',
-        color: isPartyTab ? '#ffffff' : '#94a3b8',
-      })
-      .setOrigin(0.5);
-    tab1Bg.on('pointerdown', () => {
-      if (this.partyModalTab === 'party') return;
-      audioManager.playSfx('click');
-      this.partyModalTab = 'party';
-      this._showPartyModal();
+    const tab1 = createRpgButton(this, left + 114, top + 24, 196, 26, {
+      label: `ACTIVE PARTY (${gameState.party.length}/3)`,
+      fill: isPartyTab ? 0x1d4ed8 : 0x0f172a,
+      hover: isPartyTab ? 0x2563eb : 0x1e293b,
+      border: isPartyTab ? 0x60a5fa : 0x334155,
+      lip: 0x04070f,
+      textColor: isPartyTab ? '#ffffff' : '#94a3b8',
+      fontSize: '8px',
+      fontFamily: FONTS.display,
+      depth: 72,
+      onClick: () => {
+        if (this.partyModalTab === 'party') return;
+        audioManager.playSfx('click');
+        this.partyModalTab = 'party';
+        this._showPartyModal();
+      },
     });
 
-    const tab2Bg = this.add
-      .rectangle(left + 314, top + 24, 192, 26, !isPartyTab ? 0x6d28d9 : 0x0f172a)
-      .setStrokeStyle(2, !isPartyTab ? 0xc084fc : 0x334155)
-      .setInteractive({ useHandCursor: true });
-    const tab2Txt = this.add
-      .text(left + 314, top + 24, `RIFT STORAGE (${storageList.length})`, {
-        fontFamily: FONT,
-        fontSize: '10px',
-        fontStyle: 'bold',
-        color: !isPartyTab ? '#ffffff' : '#94a3b8',
-      })
-      .setOrigin(0.5);
-    tab2Bg.on('pointerdown', () => {
-      if (this.partyModalTab === 'storage') return;
-      audioManager.playSfx('click');
-      this.partyModalTab = 'storage';
-      this.storagePage = 0;
-      this._showPartyModal();
+    const tab2 = createRpgButton(this, left + 318, top + 24, 196, 26, {
+      label: `RIFT STORAGE (${storageList.length})`,
+      fill: !isPartyTab ? 0x6d28d9 : 0x0f172a,
+      hover: !isPartyTab ? 0x7c3aed : 0x1e293b,
+      border: !isPartyTab ? 0xc084fc : 0x334155,
+      lip: 0x04070f,
+      textColor: !isPartyTab ? '#ffffff' : '#94a3b8',
+      fontSize: '8px',
+      fontFamily: FONTS.display,
+      depth: 72,
+      onClick: () => {
+        if (this.partyModalTab === 'storage') return;
+        audioManager.playSfx('click');
+        this.partyModalTab = 'storage';
+        this.storagePage = 0;
+        this._showPartyModal();
+      },
     });
 
-    const closeBtn = this.add
-      .rectangle(left + panelW - 24, top + 24, 28, 24, 0x1e293b)
-      .setStrokeStyle(1, 0x475569)
-      .setInteractive({ useHandCursor: true });
-    const closeTxt = this.add
-      .text(left + panelW - 24, top + 24, 'X', {
-        fontFamily: FONT,
-        fontSize: '11px',
-        fontStyle: 'bold',
-        color: '#f8fafc',
-      })
-      .setOrigin(0.5);
-    closeBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this._hidePartyModal();
+    const closeBtn = createRpgButton(this, left + panelW - 24, top + 24, 28, 24, {
+      label: 'X',
+      fill: 0x1e293b,
+      hover: 0x334155,
+      border: 0x64748b,
+      lip: 0x04070f,
+      textColor: '#f8fafc',
+      fontSize: '9px',
+      fontFamily: FONTS.display,
+      depth: 72,
+      onClick: () => {
+        audioManager.playSfx('click');
+        this._hidePartyModal();
+      },
     });
 
-    this.partyModalContainer.add([dim, panel, tab1Bg, tab1Txt, tab2Bg, tab2Txt, closeBtn, closeTxt]);
+    this.partyModalContainer.add([dim, panelHit, panelGfx, tab1.container, tab2.container, closeBtn.container]);
 
     if (isPartyTab) {
       this._renderPartyModalActiveTab(left, top);
@@ -1298,9 +1383,9 @@ export class WorldMapScene extends Phaser.Scene {
 
   _renderPartyModalActiveTab(left, top) {
     // 3 horizontal Monsver cards side-by-side inside modal
-    const cardW = 172;
-    const cardH = 212;
-    const gapX = 10;
+    const cardW = 174;
+    const cardH = 214;
+    const gapX = 9;
     const startX = left + 16;
     const cardY = top + 52;
     const canSendToStorage = gameState.party.length > 1;
@@ -1308,78 +1393,89 @@ export class WorldMapScene extends Phaser.Scene {
     gameState.party.slice(0, 3).forEach((mon, idx) => {
       const cardX = startX + idx * (cardW + gapX);
       const cardCx = cardX + cardW / 2;
-      const cardCy = cardY + cardH / 2;
-      const meta = ELEMENT_META[mon.element] ?? ELEMENT_META[0];
+      const meta = ELEMENT_STYLE[mon.element] ?? ELEMENT_STYLE[0];
       const isLead = idx === 0;
       const ratio = mon.currentHp / Math.max(1, mon.maxHp);
 
-      const cardBg = this.add
-        .rectangle(cardCx, cardCy, cardW, cardH, isLead ? 0x182744 : 0x0f172a)
-        .setStrokeStyle(2, isLead ? meta.color : 0x263554);
+      const cardPanel = drawRpgPanel(this, cardX, cardY, cardW, cardH, {
+        fill: isLead ? 0x162442 : 0x0f172a,
+        alpha: 0.98,
+        border: isLead ? meta.color : 0x2e3c59,
+        outer: 0x04070f,
+        accent: meta.color,
+        depth: 71,
+        rivets: false,
+      });
 
       const texKey = getMonsterTextureKey(mon.id, 0);
       const img = this.add
         .image(cardCx, cardY + 38, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(0.95);
+        .setScale(0.88);
+
+      const parts = [cardPanel, img];
+
+      if (meta.iconKey && this.textures.exists(meta.iconKey)) {
+        parts.push(this.add.image(cardX + cardW - 14, cardY + 18, meta.iconKey).setDisplaySize(12, 12));
+      }
 
       const nameTxt = this.add
-        .text(cardCx, cardY + 74, `${mon.name}  Lv.${mon.level}`, {
-          fontFamily: FONT,
-          fontSize: '11px',
+        .text(cardCx, cardY + 72, `${mon.name} Lv.${mon.level}`, {
+          fontFamily: FONTS.display,
+          fontSize: '9px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
         .setOrigin(0.5, 0);
 
       const elTxt = this.add
-        .text(cardCx, cardY + 90, `${meta.label} • SP ${mon.currentSp}/${mon.maxSp}`, {
-          fontFamily: FONT,
-          fontSize: '9px',
+        .text(cardCx, cardY + 88, `${meta.label} • SP ${mon.currentSp}/${mon.maxSp}`, {
+          fontFamily: FONTS.ui,
+          fontSize: '10px',
+          fontStyle: 'bold',
           color: meta.hex,
         })
         .setOrigin(0.5, 0);
 
       const barW = 144;
-      const track = this.add.rectangle(cardCx - barW / 2, cardY + 110, barW, 7, 0x090e1a).setOrigin(0, 0.5);
-      const fill = this.add
-        .rectangle(cardCx - barW / 2 + 1, cardY + 110, Math.round((barW - 2) * Math.max(0, Math.min(1, ratio))), 5, hpBarColor(ratio))
-        .setOrigin(0, 0.5);
+      const barGfx = this.add.graphics();
+      drawStatBar(barGfx, cardCx - barW / 2, cardY + 108, barW, 7, ratio, hpBarColor(ratio));
 
       const hpTxt = this.add
-        .text(cardCx, cardY + 122, `HP ${mon.currentHp}/${mon.maxHp}`, {
-          fontFamily: FONT,
-          fontSize: '9px',
+        .text(cardCx, cardY + 121, `HP ${mon.currentHp}/${mon.maxHp}`, {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           color: '#cbd5e1',
         })
         .setOrigin(0.5, 0);
 
       const statsTxt = this.add
-        .text(cardCx, cardY + 137, `ATK ${mon.attack}  DEF ${mon.defense}  SPD ${mon.speed}`, {
-          fontFamily: FONT,
-          fontSize: '8px',
+        .text(cardCx, cardY + 136, `ATK ${mon.attack}  DEF ${mon.defense}  SPD ${mon.speed}`, {
+          fontFamily: FONTS.ui,
+          fontSize: '9px',
           color: '#94a3b8',
         })
         .setOrigin(0.5, 0);
 
       const xpTxt = this.add
         .text(cardCx, cardY + 150, `XP ${mon.xp ?? 0}/${mon.xpToNext ?? mon.level * 50}`, {
-          fontFamily: FONT,
-          fontSize: '8px',
-          color: '#a855f7',
+          fontFamily: FONTS.display,
+          fontSize: '7px',
+          color: '#c084fc',
         })
         .setOrigin(0.5, 0);
 
-      this.partyModalContainer.add([cardBg, img, nameTxt, elTxt, track, fill, hpTxt, statsTxt, xpTxt]);
+      parts.push(nameTxt, elTxt, barGfx, hpTxt, statsTxt, xpTxt);
+      this.partyModalContainer.add(parts);
 
-      const btnY = cardY + 186;
+      const btnY = cardY + 187;
       if (isLead) {
         const w = canSendToStorage ? 76 : 128;
-        const bx = canSendToStorage ? cardCx - 38 : cardCx;
+        const bx = canSendToStorage ? cardCx - 40 : cardCx;
         const leadBg = this.add.rectangle(bx, btnY, w, 24, 0x065f46).setStrokeStyle(1, 0x34d399);
         const leadTxt = this.add
           .text(bx, btnY, 'LEAD ★', {
-            fontFamily: FONT,
-            fontSize: '9px',
+            fontFamily: FONTS.display,
+            fontSize: '8px',
             fontStyle: 'bold',
             color: '#6ee7b7',
           })
@@ -1387,63 +1483,59 @@ export class WorldMapScene extends Phaser.Scene {
         this.partyModalContainer.add([leadBg, leadTxt]);
       } else {
         const w = canSendToStorage ? 76 : 128;
-        const bx = canSendToStorage ? cardCx - 38 : cardCx;
-        const swapBtn = this.add
-          .rectangle(bx, btnY, w, 24, 0x1d4ed8)
-          .setStrokeStyle(1, 0x60a5fa)
-          .setInteractive({ useHandCursor: true });
-        const swapTxt = this.add
-          .text(bx, btnY, 'SET LEAD', {
-            fontFamily: FONT,
-            fontSize: '9px',
-            fontStyle: 'bold',
-            color: '#ffffff',
-          })
-          .setOrigin(0.5);
-
-        swapBtn.on('pointerdown', () => {
-          audioManager.playSfx('click');
-          gameState.swapPartyOrder(0, idx);
-          this._renderPartyStrip();
-          this._showPartyModal();
-          this._showToast(`${gameState.party[0].name} sekarang menjadi Lead!`, '#38bdf8');
+        const bx = canSendToStorage ? cardCx - 40 : cardCx;
+        const swapBtn = createRpgButton(this, bx, btnY, w, 24, {
+          label: 'SET LEAD',
+          fill: 0x1d4ed8,
+          hover: 0x2563eb,
+          border: 0x60a5fa,
+          lip: 0x04070f,
+          textColor: '#ffffff',
+          fontSize: '7px',
+          fontFamily: FONTS.display,
+          depth: 72,
+          onClick: () => {
+            audioManager.playSfx('click');
+            gameState.swapPartyOrder(0, idx);
+            this._renderPartyStrip();
+            this._showPartyModal();
+            this._showToast(`${gameState.party[0].name} sekarang menjadi Lead!`, '#38bdf8');
+          },
         });
-        this.partyModalContainer.add([swapBtn, swapTxt]);
+        this.partyModalContainer.add(swapBtn.container);
       }
 
       if (canSendToStorage) {
-        const storeBtn = this.add
-          .rectangle(cardCx + 42, btnY, 68, 24, 0x4c1d95)
-          .setStrokeStyle(1, 0xc084fc)
-          .setInteractive({ useHandCursor: true });
-        const storeTxt = this.add
-          .text(cardCx + 42, btnY, 'SIMPAN', {
-            fontFamily: FONT,
-            fontSize: '9px',
-            fontStyle: 'bold',
-            color: '#f3e8ff',
-          })
-          .setOrigin(0.5);
-
-        storeBtn.on('pointerdown', () => {
-          let ok = false;
-          if (typeof gameState.movePartyToStorage === 'function') {
-            ok = Boolean(gameState.movePartyToStorage(idx));
-          } else if (gameState.party.length > 1 && gameState.party[idx]) {
-            const [moved] = gameState.party.splice(idx, 1);
-            if (!Array.isArray(gameState.storage)) gameState.storage = [];
-            gameState.storage.push(moved);
-            gameState.save?.();
-            ok = true;
-          }
-          if (ok) {
-            audioManager.playSfx('click');
-            this._renderPartyStrip();
-            this._showPartyModal();
-            this._showToast(`${mon.name} dipindahkan ke Rift Storage!`, '#c084fc');
-          }
+        const storeBtn = createRpgButton(this, cardCx + 42, btnY, 70, 24, {
+          label: 'SIMPAN',
+          fill: 0x4c1d95,
+          hover: 0x6d28d9,
+          border: 0xc084fc,
+          lip: 0x04070f,
+          textColor: '#f3e8ff',
+          fontSize: '7px',
+          fontFamily: FONTS.display,
+          depth: 72,
+          onClick: () => {
+            let ok = false;
+            if (typeof gameState.movePartyToStorage === 'function') {
+              ok = Boolean(gameState.movePartyToStorage(idx));
+            } else if (gameState.party.length > 1 && gameState.party[idx]) {
+              const [moved] = gameState.party.splice(idx, 1);
+              if (!Array.isArray(gameState.storage)) gameState.storage = [];
+              gameState.storage.push(moved);
+              gameState.save?.();
+              ok = true;
+            }
+            if (ok) {
+              audioManager.playSfx('click');
+              this._renderPartyStrip();
+              this._showPartyModal();
+              this._showToast(`${mon.name} dipindahkan ke Rift Storage!`, '#c084fc');
+            }
+          },
         });
-        this.partyModalContainer.add([storeBtn, storeTxt]);
+        this.partyModalContainer.add(storeBtn.container);
       }
     });
   }
@@ -1457,8 +1549,8 @@ export class WorldMapScene extends Phaser.Scene {
           top + panelH / 2 + 10,
           'Rift Storage masih kosong.\nTangkap Monsver liar dengan Rift Orb atau Hyper Orb!',
           {
-            fontFamily: FONT,
-            fontSize: '11px',
+            fontFamily: FONTS.ui,
+            fontSize: '12px',
             color: '#94a3b8',
             align: 'center',
             lineSpacing: 5,
@@ -1480,15 +1572,15 @@ export class WorldMapScene extends Phaser.Scene {
       // Party swap target selector bar
       const barY = top + 58;
       const lbl = this.add.text(left + 16, barY - 6, 'TUKAR DGN:', {
-        fontFamily: FONT,
-        fontSize: '9px',
+        fontFamily: FONTS.display,
+        fontSize: '7px',
         fontStyle: 'bold',
         color: '#fde047',
       });
       this.partyModalContainer.add(lbl);
 
       gameState.party.slice(0, 3).forEach((pm, pIdx) => {
-        const px = left + 150 + pIdx * 138;
+        const px = left + 154 + pIdx * 138;
         const selected = this.selectedPartySwapIdx === pIdx;
         const pill = this.add
           .rectangle(px, barY, 130, 22, selected ? 0x1e3a5f : 0x0f172a)
@@ -1496,8 +1588,8 @@ export class WorldMapScene extends Phaser.Scene {
           .setInteractive({ useHandCursor: true });
         const pTxt = this.add
           .text(px, barY, `${pIdx + 1}. ${pm.name.slice(0, 9)} Lv.${pm.level}`, {
-            fontFamily: FONT,
-            fontSize: '8px',
+            fontFamily: FONTS.ui,
+            fontSize: '9px',
             fontStyle: 'bold',
             color: selected ? '#fde047' : '#cbd5e1',
           })
@@ -1519,9 +1611,9 @@ export class WorldMapScene extends Phaser.Scene {
     const pageStart = this.storagePage * perPage;
     const pageItems = storageList.slice(pageStart, pageStart + perPage);
 
-    const cardW = 172;
+    const cardW = 174;
     const cardH = partyFull ? 86 : 96;
-    const gapX = 10;
+    const gapX = 9;
     const gapY = 8;
     const startX = left + 16;
 
@@ -1531,7 +1623,7 @@ export class WorldMapScene extends Phaser.Scene {
       const row = Math.floor(localIdx / 3);
       const x = startX + col * (cardW + gapX);
       const y = gridStartY + row * (cardH + gapY);
-      const meta = ELEMENT_META[mon.element] ?? ELEMENT_META[0];
+      const meta = ELEMENT_STYLE[mon.element] ?? ELEMENT_STYLE[0];
 
       const bg = this.add
         .rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x0f172a)
@@ -1540,76 +1632,80 @@ export class WorldMapScene extends Phaser.Scene {
       const texKey = getMonsterTextureKey(mon.id, 0);
       const sp = this.add
         .image(x + 28, y + 32, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(0.72);
+        .setScale(0.66);
 
-      const nameTxt = this.add.text(x + 54, y + 10, `${mon.name.slice(0, 10)}`, {
-        fontFamily: FONT,
-        fontSize: '10px',
+      const parts = [bg, sp];
+      if (meta.iconKey && this.textures.exists(meta.iconKey)) {
+        parts.push(this.add.image(x + cardW - 12, y + 12, meta.iconKey).setDisplaySize(10, 10));
+      }
+
+      const nameTxt = this.add.text(x + 54, y + 8, `${mon.name.slice(0, 10)}`, {
+        fontFamily: FONTS.ui,
+        fontSize: '11px',
         fontStyle: 'bold',
         color: '#f8fafc',
       });
-      const subTxt = this.add.text(x + 54, y + 24, `Lv.${mon.level} • ${meta.label}`, {
-        fontFamily: FONT,
-        fontSize: '8px',
+      const subTxt = this.add.text(x + 54, y + 23, `Lv.${mon.level} • ${meta.label}`, {
+        fontFamily: FONTS.ui,
+        fontSize: '9px',
         color: meta.hex,
       });
-      const statTxt = this.add.text(x + 54, y + 37, `HP ${mon.maxHp}  ATK ${mon.attack}`, {
-        fontFamily: FONT,
-        fontSize: '8px',
+      const statTxt = this.add.text(x + 54, y + 36, `HP ${mon.maxHp}  ATK ${mon.attack}`, {
+        fontFamily: FONTS.ui,
+        fontSize: '9px',
         color: '#94a3b8',
       });
 
-      const actBtn = this.add
-        .rectangle(x + cardW / 2, y + cardH - 16, cardW - 18, 22, partyFull ? 0xb45309 : 0x059669)
-        .setStrokeStyle(1, partyFull ? 0xfbbf24 : 0x34d399)
-        .setInteractive({ useHandCursor: true });
-      const actTxt = this.add
-        .text(x + cardW / 2, y + cardH - 16, partyFull ? 'TUKAR' : 'MASUK PARTY', {
-          fontFamily: FONT,
-          fontSize: '9px',
-          fontStyle: 'bold',
-          color: '#ffffff',
-        })
-        .setOrigin(0.5);
-
-      actBtn.on('pointerdown', () => {
-        if (!partyFull) {
-          let ok = false;
-          if (typeof gameState.moveStorageToParty === 'function') {
-            ok = Boolean(gameState.moveStorageToParty(sIdx));
-          } else if (gameState.party.length < 3 && gameState.storage?.[sIdx]) {
-            const [moved] = gameState.storage.splice(sIdx, 1);
-            gameState.party.push(moved);
-            gameState.save?.();
-            ok = true;
+      const actBtn = createRpgButton(this, x + cardW / 2, y + cardH - 16, cardW - 18, 22, {
+        label: partyFull ? 'TUKAR' : 'MASUK PARTY',
+        fill: partyFull ? 0xb45309 : 0x059669,
+        hover: partyFull ? 0xd97706 : 0x10b981,
+        border: partyFull ? 0xfbbf24 : 0x34d399,
+        lip: 0x04070f,
+        textColor: '#ffffff',
+        fontSize: '7px',
+        fontFamily: FONTS.display,
+        depth: 72,
+        onClick: () => {
+          if (!partyFull) {
+            let ok = false;
+            if (typeof gameState.moveStorageToParty === 'function') {
+              ok = Boolean(gameState.moveStorageToParty(sIdx));
+            } else if (gameState.party.length < 3 && gameState.storage?.[sIdx]) {
+              const [moved] = gameState.storage.splice(sIdx, 1);
+              gameState.party.push(moved);
+              gameState.save?.();
+              ok = true;
+            }
+            if (ok) {
+              audioManager.playSfx('heal');
+              this._renderPartyStrip();
+              this._showPartyModal();
+              this._showToast(`${mon.name} bergabung ke Active Party!`, '#4ade80');
+            }
+          } else {
+            const prevName = gameState.party[this.selectedPartySwapIdx]?.name ?? 'Monsver';
+            const ok = gameState.swapWithStorage?.(this.selectedPartySwapIdx, sIdx);
+            if (ok) {
+              audioManager.playSfx('click');
+              this._renderPartyStrip();
+              this._showPartyModal();
+              this._showToast(`${mon.name} ditukar dengan ${prevName}!`, '#fde047');
+            }
           }
-          if (ok) {
-            audioManager.playSfx('heal');
-            this._renderPartyStrip();
-            this._showPartyModal();
-            this._showToast(`${mon.name} bergabung ke Active Party!`, '#4ade80');
-          }
-        } else {
-          const prevName = gameState.party[this.selectedPartySwapIdx]?.name ?? 'Monsver';
-          const ok = gameState.swapWithStorage?.(this.selectedPartySwapIdx, sIdx);
-          if (ok) {
-            audioManager.playSfx('click');
-            this._renderPartyStrip();
-            this._showPartyModal();
-            this._showToast(`${mon.name} ditukar dengan ${prevName}!`, '#fde047');
-          }
-        }
+        },
       });
 
-      this.partyModalContainer.add([bg, sp, nameTxt, subTxt, statTxt, actBtn, actTxt]);
+      parts.push(nameTxt, subTxt, statTxt, actBtn.container);
+      this.partyModalContainer.add(parts);
     });
 
     if (totalPages > 1) {
       const py = top + panelH - 14;
       const prevBtn = this.add
-        .text(left + panelW / 2 - 54, py, '< PREV', {
-          fontFamily: FONT,
-          fontSize: '9px',
+        .text(left + panelW / 2 - 58, py, '< PREV', {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           fontStyle: 'bold',
           color: this.storagePage > 0 ? '#7dd3fc' : '#475569',
         })
@@ -1617,15 +1713,15 @@ export class WorldMapScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
       const pageTxt = this.add
         .text(left + panelW / 2, py, `${this.storagePage + 1}/${totalPages}`, {
-          fontFamily: FONT,
-          fontSize: '9px',
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           color: '#cbd5e1',
         })
         .setOrigin(0.5);
       const nextBtn = this.add
-        .text(left + panelW / 2 + 54, py, 'NEXT >', {
-          fontFamily: FONT,
-          fontSize: '9px',
+        .text(left + panelW / 2 + 58, py, 'NEXT >', {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           fontStyle: 'bold',
           color: this.storagePage < totalPages - 1 ? '#7dd3fc' : '#475569',
         })
@@ -1660,13 +1756,13 @@ export class WorldMapScene extends Phaser.Scene {
 
   _showToast(message, color = '#4ade80') {
     const toastBg = this.add
-      .rectangle(320, 260, 360, 26, 0x090e1a, 0.95)
-      .setStrokeStyle(1, hexToInt(color, 0x4ade80))
+      .rectangle(320, 260, 368, 26, 0x09111f, 0.96)
+      .setStrokeStyle(2, hexToInt(color, 0x4ade80))
       .setDepth(85);
     const toastTxt = this.add
       .text(320, 260, message, {
-        fontFamily: FONT,
-        fontSize: '10px',
+        fontFamily: FONTS.ui,
+        fontSize: '11px',
         fontStyle: 'bold',
         color,
       })

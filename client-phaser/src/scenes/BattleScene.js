@@ -5,11 +5,10 @@ import { MONSTERS, STARTER_IDS, createMonsterInstance } from '../data/monsters.j
 import { ENDING_DIALOGUE, getNodeById, getNextNodeId } from '../data/campaign.js';
 import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { BattleHud, ELEMENT_META } from '../ui/BattleHud.js';
+import { FONTS, ELEMENT_STYLE, drawRpgPanel } from '../ui/UiTheme.js';
 import { DialogueBox } from '../ui/DialogueBox.js';
 import { gameState } from '../state/gameState.js';
 import { audioManager } from '../audio/audioManager.js';
-
-const FONT = 'monospace';
 
 export class BattleScene extends Phaser.Scene {
   constructor() {
@@ -59,12 +58,13 @@ export class BattleScene extends Phaser.Scene {
     this.idleFrame = 0;
     this.mcSprite = null;
     this.mcTexPrefix = null;
-    this.mcPos = { x: 52, y: 196 };
+    this.mcPos = { x: 54, y: 194 };
     this.enemyTrainerSprite = null;
     this.enemyTrainerTexPrefix = null;
-    // Landscape 640x360 arena positions (y: 32..234)
-    this.playerPos = { x: 158, y: 184 };
-    this.enemyPos = { x: 484, y: 112 };
+    this.playerGroundRing = null;
+    // Landscape 640x360 arena positions (y: 32..234) tuned for HD 64x64 / 56x64 textures
+    this.playerPos = { x: 164, y: 180 };
+    this.enemyPos = { x: 478, y: 112 };
   }
 
   get player() {
@@ -172,6 +172,18 @@ export class BattleScene extends Phaser.Scene {
       g.fillRect(0, 200, 640, 36);
     }
 
+    // Subtle cinematic atmospheric vignette framing the 640x204 battle vista
+    const vig = this.add.graphics().setDepth(3);
+    vig.fillStyle(0x020617, 0.36);
+    vig.fillRect(0, 32, 640, 14);
+    vig.fillStyle(0x020617, 0.16);
+    vig.fillRect(0, 46, 640, 12);
+    vig.fillStyle(0x020617, 0.34);
+    vig.fillRect(0, 220, 640, 16);
+    vig.fillStyle(0x020617, 0.24);
+    vig.fillRect(0, 32, 22, 204);
+    vig.fillRect(618, 32, 22, 204);
+
     // Crisp grounded battle platforms right underneath each sprite
     const plat = this.add.graphics().setDepth(4);
     plat.fillStyle(0x091521, 0.72);
@@ -188,24 +200,113 @@ export class BattleScene extends Phaser.Scene {
     plat.lineStyle(2, 0x38bdf8, 0.45);
     plat.strokeEllipse(this.playerPos.x, this.playerPos.y + 38, 142, 26);
 
-    // Ambient floating fireflies spread across 640px arena
-    for (let i = 0; i < 10; i++) {
-      const mote = this.add
-        .rectangle(36 + i * 62, 54 + (i % 3) * 44, 3, 3, i % 2 === 0 ? 0xfde047 : 0x38bdf8, 0.55)
-        .setDepth(5);
+    // Chapter-themed ambient particles across the 640x204 battle vista
+    this._spawnChapterAmbientParticles(themeKey);
+  }
+
+  _spawnChapterAmbientParticles(themeKey) {
+    if (themeKey === 'bg_arena_azure') {
+      // Azure: drifting cyan sea mist motes
+      for (let i = 0; i < 14; i++) {
+        const mx = 24 + i * 44;
+        const my = 48 + (i % 4) * 42;
+        const mist = this.add
+          .ellipse(mx, my, 10 + (i % 3) * 5, 4, i % 2 === 0 ? 0x38bdf8 : 0xbae6fd, 0.28)
+          .setDepth(5);
+        this.tweens.add({
+          targets: mist,
+          x: mx + 26 + (i % 3) * 10,
+          y: my - 6,
+          alpha: 0.06,
+          yoyo: true,
+          repeat: -1,
+          duration: 2100 + i * 170,
+          ease: 'Sine.easeInOut',
+        });
+      }
+    } else if (themeKey === 'bg_arena_ignis') {
+      // Ignis: rising orange/gold volcanic embers
+      for (let i = 0; i < 16; i++) {
+        const ex = 20 + i * 39;
+        const ey = 178 + (i % 3) * 18;
+        const col = i % 3 === 0 ? 0xfef08a : i % 2 === 0 ? 0xf97316 : 0xef4444;
+        const ember = this.add.rectangle(ex, ey, i % 3 === 0 ? 3 : 2, i % 3 === 0 ? 3 : 2, col, 0.85).setDepth(5);
+        this.tweens.add({
+          targets: ember,
+          y: ey - 110 - (i % 4) * 16,
+          x: ex + (i % 2 === 0 ? 14 : -14),
+          alpha: 0.05,
+          repeat: -1,
+          duration: 1800 + (i % 5) * 340,
+          delay: (i % 4) * 260,
+          ease: 'Sine.easeOut',
+        });
+      }
+    } else if (themeKey === 'bg_arena_eclipse') {
+      // Eclipse: floating violet rift sparks
+      for (let i = 0; i < 14; i++) {
+        const rx = 26 + i * 44;
+        const ry = 54 + (i % 4) * 38;
+        const col = i % 3 === 0 ? 0xf472b6 : i % 2 === 0 ? 0xc084fc : 0x9333ea;
+        const spark = this.add.rectangle(rx, ry, 3, 3, col, 0.72).setRotation(Math.PI / 4).setDepth(5);
+        this.tweens.add({
+          targets: spark,
+          y: ry - 18,
+          angle: 225,
+          alpha: 0.14,
+          yoyo: true,
+          repeat: -1,
+          duration: 1500 + (i % 5) * 240,
+          ease: 'Sine.easeInOut',
+        });
+      }
+    } else {
+      // Solara (default): emerald & warm gold fireflies
+      for (let i = 0; i < 12; i++) {
+        const fx = 28 + i * 52;
+        const fy = 52 + (i % 3) * 44;
+        const col = i % 2 === 0 ? 0x4ade80 : 0xfde047;
+        const mote = this.add.rectangle(fx, fy, 3, 3, col, 0.65).setDepth(5);
+        this.tweens.add({
+          targets: mote,
+          y: fy - 16,
+          x: fx + (i % 2 === 0 ? 8 : -8),
+          alpha: 0.12,
+          yoyo: true,
+          repeat: -1,
+          duration: 1650 + i * 180,
+          ease: 'Sine.easeInOut',
+        });
+      }
+    }
+  }
+
+  _updatePlayerGroundRing() {
+    const elColor = ELEMENT_STYLE[this.player?.element]?.color ?? 0x38bdf8;
+    if (!this.playerGroundRing) {
+      this.playerGroundRing = this.add
+        .ellipse(this.playerPos.x, this.playerPos.y + 38, 118, 22, elColor, 0.16)
+        .setStrokeStyle(2, elColor, 0.72)
+        .setDepth(7);
       this.tweens.add({
-        targets: mote,
-        y: mote.y - 16,
-        alpha: 0.12,
+        targets: this.playerGroundRing,
+        scaleX: 1.08,
+        scaleY: 1.12,
+        alpha: 0.42,
         yoyo: true,
         repeat: -1,
-        duration: 1600 + i * 200,
+        duration: 1100,
         ease: 'Sine.easeInOut',
       });
+    } else {
+      this.playerGroundRing.setFillStyle(elColor, 0.16);
+      this.playerGroundRing.setStrokeStyle(2, elColor, 0.72);
     }
   }
 
   _buildMonsterSprites() {
+    this._updatePlayerGroundRing();
+
     this.enemyShadow = this.add
       .ellipse(this.enemyPos.x, this.enemyPos.y + 34, 72, 14, 0x020617, 0.52)
       .setDepth(8);
@@ -213,16 +314,16 @@ export class BattleScene extends Phaser.Scene {
       .ellipse(this.playerPos.x, this.playerPos.y + 38, 82, 16, 0x020617, 0.56)
       .setDepth(8);
 
-    // Landscape monster sprite scales (enemy: 1.65, player: 1.85)
+    // Tuned HD 64x64 monster sprite scales (enemy: 1.45, player: 1.65)
     this.enemySprite = this.add
       .image(this.enemyPos.x, this.enemyPos.y, getMonsterTextureKey(this.enemy.id, 0))
-      .setScale(1.65)
+      .setScale(1.45)
       .setFlipX(true)
       .setDepth(10);
 
     this.playerSprite = this.add
       .image(this.playerPos.x, this.playerPos.y, getMonsterTextureKey(this.player.id, 0))
-      .setScale(1.85)
+      .setScale(1.65)
       .setDepth(12);
 
     this._startIdleTweens();
@@ -254,18 +355,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   _buildStandingCharacters() {
-    // Left flank: MC standing sprite (x: 52, y: 196, scale 1.05, depth 11)
+    // Left flank: MC standing sprite (x: 54, y: 194, scale 1.08, depth 11)
     if (this.textures.exists('char_mc_0')) {
-      this.add.ellipse(this.mcPos.x, this.mcPos.y + 30, 38, 9, 0x020617, 0.48).setDepth(8);
-      this.mcSprite = this.add.image(this.mcPos.x, this.mcPos.y, 'char_mc_0').setScale(1.05).setDepth(11);
+      this.add.ellipse(this.mcPos.x, this.mcPos.y + 32, 40, 10, 0x020617, 0.48).setDepth(8);
+      this.mcSprite = this.add.image(this.mcPos.x, this.mcPos.y, 'char_mc_0').setScale(1.08).setDepth(11);
       this.mcTexPrefix = 'char_mc';
     } else if (this.textures.exists('portrait_player')) {
       this.add.ellipse(this.mcPos.x, this.mcPos.y + 24, 34, 8, 0x020617, 0.42).setDepth(8);
-      this.mcSprite = this.add.image(this.mcPos.x, this.mcPos.y, 'portrait_player').setScale(0.85).setDepth(11);
+      this.mcSprite = this.add.image(this.mcPos.x, this.mcPos.y, 'portrait_player').setScale(0.75).setDepth(11);
       this.mcTexPrefix = null;
     }
 
-    // Right flank: Rival Kael or Rift Warden in Campaign battles (x: 590, y: 118, scale 1.0, flipped, depth 9)
+    // Right flank: Rival Kael or Rift Warden in Campaign battles (x: 588, y: 118, scale 1.02, flipped, depth 9)
     if (this.mode === 'campaign' && this.node) {
       let prefix = null;
       let fallbackPortrait = null;
@@ -278,18 +379,18 @@ export class BattleScene extends Phaser.Scene {
       }
 
       if (prefix && this.textures.exists(`${prefix}_0`)) {
-        this.add.ellipse(590, 146, 36, 8, 0x020617, 0.42).setDepth(8);
+        this.add.ellipse(588, 148, 38, 8, 0x020617, 0.42).setDepth(8);
         this.enemyTrainerSprite = this.add
-          .image(590, 118, `${prefix}_0`)
-          .setScale(1.0)
+          .image(588, 118, `${prefix}_0`)
+          .setScale(1.02)
           .setFlipX(true)
           .setDepth(9);
         this.enemyTrainerTexPrefix = prefix;
       } else if (fallbackPortrait && this.textures.exists(fallbackPortrait)) {
-        this.add.ellipse(590, 140, 32, 8, 0x020617, 0.38).setDepth(8);
+        this.add.ellipse(588, 140, 32, 8, 0x020617, 0.38).setDepth(8);
         this.enemyTrainerSprite = this.add
-          .image(590, 118, fallbackPortrait)
-          .setScale(0.8)
+          .image(588, 118, fallbackPortrait)
+          .setScale(0.72)
           .setFlipX(true)
           .setDepth(9);
         this.enemyTrainerTexPrefix = null;
@@ -371,14 +472,14 @@ export class BattleScene extends Phaser.Scene {
     this.time.delayedCall(520, () => emitter.destroy());
   }
 
-  _spawnPopup(x, y, text, color = '#ffffff', fontSize = '14px') {
+  _spawnPopup(x, y, text, color = '#ffffff', fontSize = '13px') {
     const popup = this.add
       .text(x, y, text, {
-        fontFamily: FONT,
+        fontFamily: FONTS.display,
         fontSize,
         fontStyle: 'bold',
         color,
-        stroke: '#070b14',
+        stroke: '#04070f',
         strokeThickness: 4,
       })
       .setOrigin(0.5)
@@ -1076,6 +1177,7 @@ export class BattleScene extends Phaser.Scene {
     this.activePartyIndex = newIndex;
     this.player.guarding = false;
     this._applyMonsterTextures();
+    this._updatePlayerGroundRing();
     this._startIdleTweens();
     this._syncHud(false);
 
@@ -1257,36 +1359,45 @@ export class BattleScene extends Phaser.Scene {
     this._spawnParticles(this.playerPos.x, this.playerPos.y, 0xfde047, 28);
     await this._delay(240);
     this._applyMonsterTextures();
+    this._updatePlayerGroundRing();
     this.playerSprite.clearTint();
     this._syncHud(true);
 
     this.tweens.add({
       targets: this.playerSprite,
-      scale: 2.2,
+      scale: 1.95,
       yoyo: true,
       duration: 240,
       ease: 'Back.easeOut',
-      onComplete: () => this.playerSprite.setScale(1.85),
+      onComplete: () => this.playerSprite.setScale(1.65),
     });
 
     const banner = this.add.container(0, 0).setDepth(75);
-    const bg = this.add.rectangle(cx, cy, 380, 84, 0x0b1222, 0.96).setStrokeStyle(3, 0xfacc15);
+    const bg = drawRpgPanel(this, cx - 196, cy - 44, 392, 88, {
+      fill: 0x0c1426,
+      alpha: 0.96,
+      border: 0xfacc15,
+      outer: 0x04070f,
+      accent: 0xfacc15,
+      depth: 75,
+      rivets: true,
+    });
     const title = this.add
-      .text(cx, cy - 18, '★ EVOLUTION CEREMONY! ★', {
-        fontFamily: FONT,
-        fontSize: '14px',
+      .text(cx, cy - 16, '★ EVOLUTION CEREMONY! ★', {
+        fontFamily: FONTS.display,
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#fde047',
       })
       .setOrigin(0.5);
     const msg = this.add
-      .text(cx, cy + 12, `${evo.oldName} berevolusi menjadi ${evo.newName}!`, {
-        fontFamily: FONT,
+      .text(cx, cy + 14, `${evo.oldName} berevolusi menjadi ${evo.newName}!`, {
+        fontFamily: FONTS.ui,
         fontSize: '12px',
         fontStyle: 'bold',
         color: '#f8fafc',
         align: 'center',
-        wordWrap: { width: 344 },
+        wordWrap: { width: 356 },
       })
       .setOrigin(0.5);
 

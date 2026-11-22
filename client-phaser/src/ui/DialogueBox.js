@@ -1,12 +1,12 @@
 import { audioManager } from '../audio/audioManager.js';
+import { FONTS } from './UiTheme.js';
 
-const FONT = 'monospace';
 const TYPE_DELAY_MS = 22;
 const BASE_DEPTH = 200;
 const BLIP_CHAR_INTERVAL = 3;
 
 const PORTRAIT_SIZE = 72;
-const PORTRAIT_TARGET_SCALE = 1.4;
+const PORTRAIT_TARGET_SCALE = 1.0;
 
 const SPEAKER_THEMES = {
   orin: { bg: 0x0c4a6e, border: 0x38bdf8, text: '#7dd3fc', badgeFill: 0x082f49 },
@@ -64,6 +64,7 @@ export class DialogueBox {
     this._cursorText = null;
     this._progressText = null;
     this._cardGfx = null;
+    this._portraitFrameGfx = null;
 
     this._onShutdown = () => this._finish();
     this._onKeyDown = (event) => {
@@ -92,9 +93,9 @@ export class DialogueBox {
     const portraitX = cardX + portraitPadX + portraitSize / 2;
     const portraitY = cardY + Math.round(cardH / 2);
 
-    const bodyX = cardX + portraitPadX + portraitSize + 16;
-    const bodyY = cardY + 16;
-    const bodyWrapW = Math.max(140, cardW - (bodyX - cardX) - 24);
+    const bodyX = cardX + portraitPadX + portraitSize + 18;
+    const bodyY = cardY + 15;
+    const bodyWrapW = Math.max(140, cardW - (bodyX - cardX) - 22);
 
     return {
       width,
@@ -168,7 +169,7 @@ export class DialogueBox {
     // 1. Full-screen semi-transparent backdrop dimmer blocking underlying scene clicks
     const backdrop = this._track(
       this.scene.add
-        .rectangle(width / 2, height / 2, width, height, 0x050811, this._dimAlpha)
+        .rectangle(width / 2, height / 2, width, height, 0x04070f, this._dimAlpha)
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH)
         .setInteractive({ useHandCursor: true })
@@ -178,11 +179,11 @@ export class DialogueBox {
       this._handleAdvanceTap();
     });
 
-    // 2. Wide bottom pixel-bordered dialogue card (640x360 -> x: 24, y: 238, w: 592, h: 110)
+    // 2. Wide bottom beveled RPG dialogue card (drawRpgPanel style with corner rivets)
     this._cardGfx = this._track(
       this.scene.add.graphics().setScrollFactor(0).setDepth(BASE_DEPTH + 1)
     );
-    this._drawCardFrame(0x3b4f78);
+    this._drawCardFrame(0x3b527a);
 
     // 3. Color-coded Speaker Name Pill above card (left side)
     this._speakerPillGfx = this._track(
@@ -191,8 +192,8 @@ export class DialogueBox {
     this._speakerText = this._track(
       this.scene.add
         .text(cardX + 20, cardY - 12, '', {
-          fontFamily: FONT,
-          fontSize: '12px',
+          fontFamily: FONTS.display,
+          fontSize: '10px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
@@ -201,11 +202,18 @@ export class DialogueBox {
         .setDepth(BASE_DEPTH + 3)
     );
 
-    // 4. SKIP >> button at top-right of dialogue card
-    const skipW = 74;
+    // 4. Tactile beveled SKIP >> button at top-right of dialogue card
+    const skipW = 78;
     const skipH = 22;
     const skipX = cardX + cardW - skipW / 2 - 4;
-    const skipY = cardY - 12;
+    const skipY = cardY - 13;
+
+    this._track(
+      this.scene.add
+        .rectangle(skipX, skipY + 2, skipW, skipH, 0x04070f)
+        .setScrollFactor(0)
+        .setDepth(BASE_DEPTH + 3)
+    );
 
     const skipBg = this._track(
       this.scene.add
@@ -216,11 +224,18 @@ export class DialogueBox {
         .setInteractive({ useHandCursor: true })
     );
 
+    const skipShine = this._track(
+      this.scene.add
+        .rectangle(skipX, skipY - skipH / 2 + 2, skipW - 6, 2, 0xffffff, 0.16)
+        .setScrollFactor(0)
+        .setDepth(BASE_DEPTH + 5)
+    );
+
     const skipTxt = this._track(
       this.scene.add
         .text(skipX, skipY, 'SKIP >>', {
-          fontFamily: FONT,
-          fontSize: '10px',
+          fontFamily: FONTS.display,
+          fontSize: '9px',
           fontStyle: 'bold',
           color: '#cbd5e1',
         })
@@ -231,32 +246,35 @@ export class DialogueBox {
 
     skipBg.on('pointerover', () => {
       skipBg.setFillStyle(0x233354);
+      skipBg.setStrokeStyle(2, 0x7dd3fc);
       skipTxt.setColor('#ffffff');
     });
     skipBg.on('pointerout', () => {
       skipBg.setFillStyle(0x16223a);
+      skipBg.setStrokeStyle(2, 0x475569);
       skipTxt.setColor('#cbd5e1');
+      skipBg.y = skipY;
+      skipShine.y = skipY - skipH / 2 + 2;
+      skipTxt.y = skipY;
     });
     skipBg.on('pointerdown', (_pointer, _localX, _localY, event) => {
       event?.stopPropagation?.();
+      skipBg.y = skipY + 1;
+      skipShine.y = skipY - skipH / 2 + 3;
+      skipTxt.y = skipY + 1;
       audioManager.playSfx('click');
       this._finish();
     });
 
-    // 5. Left portrait frame (72x72 centered vertically inside left of card)
-    const portraitFrame = this._track(
+    // 5. Left portrait frame (crisp beveled slot for 72x72 portraits)
+    this._portraitFrameGfx = this._track(
       this.scene.add.graphics().setScrollFactor(0).setDepth(BASE_DEPTH + 2)
     );
-    const pLeft = portraitX - portraitSize / 2;
-    const pTop = portraitY - portraitSize / 2;
-    portraitFrame.fillStyle(0x3b4f78, 1);
-    portraitFrame.fillRect(pLeft - 2, pTop - 2, portraitSize + 4, portraitSize + 4);
-    portraitFrame.fillStyle(0x090e1a, 1);
-    portraitFrame.fillRect(pLeft, pTop, portraitSize, portraitSize);
+    this._drawPortraitFrame(0x3b527a);
 
     this._portraitFallbackBg = this._track(
       this.scene.add
-        .rectangle(portraitX, portraitY, portraitSize - 4, portraitSize - 4, 0x1e293b)
+        .rectangle(portraitX, portraitY, portraitSize, portraitSize, 0x1e293b)
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH + 3)
         .setVisible(false)
@@ -265,8 +283,8 @@ export class DialogueBox {
     this._portraitFallbackTxt = this._track(
       this.scene.add
         .text(portraitX, portraitY, '?', {
-          fontFamily: FONT,
-          fontSize: '28px',
+          fontFamily: FONTS.display,
+          fontSize: '24px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
@@ -276,14 +294,15 @@ export class DialogueBox {
         .setVisible(false)
     );
 
-    // 6. Dialogue body text (typewriter target)
+    // 6. Dialogue body text (crisp Chakra Petch 13px with generous line spacing)
     this._bodyText = this._track(
       this.scene.add
         .text(bodyX, bodyY, '', {
-          fontFamily: FONT,
+          fontFamily: FONTS.ui,
           fontSize: '13px',
+          fontStyle: 'bold',
           color: '#f1f5f9',
-          lineSpacing: 5,
+          lineSpacing: 6,
           wordWrap: { width: bodyWrapW, useAdvancedWrap: true },
         })
         .setScrollFactor(0)
@@ -293,9 +312,9 @@ export class DialogueBox {
     // 7. Line progress indicator at bottom-right (beside next cursor)
     this._progressText = this._track(
       this.scene.add
-        .text(cardX + cardW - 36, cardY + cardH - 16, '', {
-          fontFamily: FONT,
-          fontSize: '10px',
+        .text(cardX + cardW - 36, cardY + cardH - 15, '', {
+          fontFamily: FONTS.display,
+          fontSize: '8px',
           color: '#64748b',
         })
         .setOrigin(1, 0.5)
@@ -306,9 +325,9 @@ export class DialogueBox {
     // 8. Blinking ▼ next-indicator at bottom-right of dialogue box
     this._cursorText = this._track(
       this.scene.add
-        .text(cardX + cardW - 18, cardY + cardH - 16, '▼', {
-          fontFamily: FONT,
-          fontSize: '12px',
+        .text(cardX + cardW - 18, cardY + cardH - 15, '▼', {
+          fontFamily: FONTS.display,
+          fontSize: '11px',
           fontStyle: 'bold',
           color: '#38bdf8',
         })
@@ -327,56 +346,85 @@ export class DialogueBox {
     });
   }
 
+  _drawPortraitFrame(borderColor) {
+    if (!this._portraitFrameGfx || !this._layout) return;
+    const { portraitX, portraitY, portraitSize } = this._layout;
+    const pLeft = portraitX - portraitSize / 2;
+    const pTop = portraitY - portraitSize / 2;
+
+    this._portraitFrameGfx.clear();
+    this._portraitFrameGfx.fillStyle(0x04070f, 1);
+    this._portraitFrameGfx.fillRect(pLeft - 3, pTop - 3, portraitSize + 6, portraitSize + 6);
+    this._portraitFrameGfx.fillStyle(borderColor, 1);
+    this._portraitFrameGfx.fillRect(pLeft - 2, pTop - 2, portraitSize + 4, portraitSize + 4);
+    this._portraitFrameGfx.fillStyle(0x09111f, 1);
+    this._portraitFrameGfx.fillRect(pLeft, pTop, portraitSize, portraitSize);
+    this._portraitFrameGfx.fillStyle(0xffffff, 0.14);
+    this._portraitFrameGfx.fillRect(pLeft, pTop, portraitSize, 2);
+  }
+
   _drawCardFrame(accentColor) {
     if (!this._cardGfx || !this._layout) return;
     const { cardX, cardY, cardW, cardH } = this._layout;
     this._cardGfx.clear();
 
-    // Subtle drop shadow
-    this._cardGfx.fillStyle(0x020617, 0.72);
+    // Drop shadow
+    this._cardGfx.fillStyle(0x020617, 0.78);
     this._cardGfx.fillRect(cardX + 3, cardY + 4, cardW, cardH);
 
-    // Outer crisp pixel border
+    // Outer 1px obsidian outline (drawRpgPanel style)
+    this._cardGfx.fillStyle(0x04070f, 1);
+    this._cardGfx.fillRect(cardX - 1, cardY - 1, cardW + 2, cardH + 2);
+
+    // Beveled accent border
     this._cardGfx.fillStyle(accentColor, 1);
     this._cardGfx.fillRect(cardX, cardY, cardW, cardH);
 
-    // Inner dark frame border
-    this._cardGfx.fillStyle(0x1e293b, 1);
+    // Inner dark slate glass fill
+    this._cardGfx.fillStyle(0x0c1426, 0.96);
     this._cardGfx.fillRect(cardX + 2, cardY + 2, cardW - 4, cardH - 4);
 
-    // Main slate body
-    this._cardGfx.fillStyle(0x0f172a, 0.97);
-    this._cardGfx.fillRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8);
+    // Top rim highlight & bottom inner shadow
+    this._cardGfx.fillStyle(0xffffff, 0.16);
+    this._cardGfx.fillRect(cardX + 2, cardY + 2, cardW - 4, 2);
+    this._cardGfx.fillStyle(0x020617, 0.5);
+    this._cardGfx.fillRect(cardX + 2, cardY + cardH - 4, cardW - 4, 2);
 
-    // Top rim highlight for semi-modern HD-2D feel
-    this._cardGfx.fillStyle(0x94a3b8, 0.3);
-    this._cardGfx.fillRect(cardX + 4, cardY + 4, cardW - 8, 2);
+    // Corner rivets
+    this._cardGfx.fillStyle(0x94a3b8, 0.6);
+    this._cardGfx.fillRect(cardX + 5, cardY + 5, 2, 2);
+    this._cardGfx.fillRect(cardX + cardW - 7, cardY + 5, 2, 2);
+    this._cardGfx.fillRect(cardX + 5, cardY + cardH - 7, 2, 2);
+    this._cardGfx.fillRect(cardX + cardW - 7, cardY + cardH - 7, 2, 2);
   }
 
   _drawSpeakerPill(speaker, theme) {
     if (!this._speakerPillGfx || !this._speakerText || !this._layout) return;
     const { cardX, cardY, cardW } = this._layout;
-    const label = String(speaker || 'Narrator').trim();
+    const label = String(speaker || 'Narrator').trim().toUpperCase();
     this._speakerText.setText(label).setColor(theme.text);
 
     const maxPillW = Math.max(120, cardW - 110);
-    const pillW = Math.max(88, Math.min(maxPillW, Math.ceil(this._speakerText.width) + 24));
+    const pillW = Math.max(92, Math.min(maxPillW, Math.ceil(this._speakerText.width) + 26));
     const pillH = 24;
     const pillX = cardX + 8;
-    const pillY = cardY - 24;
+    const pillY = cardY - 25;
 
     this._speakerPillGfx.clear();
-    // Outer pixel border
+    // Outer shadow outline
+    this._speakerPillGfx.fillStyle(0x04070f, 1);
+    this._speakerPillGfx.fillRect(pillX - 1, pillY - 1, pillW + 2, pillH + 2);
+    // Beveled border
     this._speakerPillGfx.fillStyle(theme.border, 1);
     this._speakerPillGfx.fillRect(pillX, pillY, pillW, pillH);
     // Inner fill
     this._speakerPillGfx.fillStyle(theme.bg, 1);
     this._speakerPillGfx.fillRect(pillX + 2, pillY + 2, pillW - 4, pillH - 4);
     // Top rim highlight
-    this._speakerPillGfx.fillStyle(0xffffff, 0.16);
+    this._speakerPillGfx.fillStyle(0xffffff, 0.2);
     this._speakerPillGfx.fillRect(pillX + 2, pillY + 2, pillW - 4, 2);
 
-    this._speakerText.setPosition(pillX + 12, pillY + pillH / 2);
+    this._speakerText.setPosition(pillX + 13, pillY + pillH / 2);
   }
 
   _updatePortrait(line, theme) {
@@ -398,8 +446,8 @@ export class DialogueBox {
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH + 3);
 
-      const maxDim = portraitSize - 4;
-      const fitScale = Math.min(maxDim / Math.max(1, img.width), maxDim / Math.max(1, img.height));
+      // Fit cleanly for new 72x72 portraits (1:1 crisp pixel fit) and scale down if larger
+      const fitScale = Math.min(portraitSize / Math.max(1, img.width), portraitSize / Math.max(1, img.height));
       const scale = Math.min(PORTRAIT_TARGET_SCALE, fitScale);
       img.setScale(scale);
       this._portraitImage = img;
@@ -429,6 +477,7 @@ export class DialogueBox {
     const theme = getSpeakerTheme(line.speaker);
 
     this._drawCardFrame(theme.border);
+    this._drawPortraitFrame(theme.border);
     this._drawSpeakerPill(line.speaker, theme);
     this._updatePortrait(line, theme);
     this._progressText.setText(`${index + 1}/${this._lines.length}`);
@@ -530,6 +579,7 @@ export class DialogueBox {
     this._cursorText = null;
     this._progressText = null;
     this._cardGfx = null;
+    this._portraitFrameGfx = null;
     this._layout = null;
 
     const resolve = this._resolve;

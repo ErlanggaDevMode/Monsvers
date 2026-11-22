@@ -1,18 +1,24 @@
 /**
- * Monsvers: The Battle Monster — Story Pixel Art Sprites & Chapter Arena Backdrops
+ * Monsvers: The Battle Monster — Story Pixel Art Sprites & Chapter Arena Backdrops (v1.3)
  *
  * Generates:
- * - 5 Character Dialogue Portraits (48x48, drawn 16x16 scaled 3x):
- *   1. portrait_orin (wise scholar glasses & cyan scarf)
- *   2. portrait_kael (spiky fiery rival hair & visor)
- *   3. portrait_player (heroic young Tamer headband)
- *   4. portrait_warden (masked crimson Rift Warden)
- *   5. portrait_umbravex (glowing purple Eclipse Apex silhouette)
+ * - 5 HD Character Dialogue Portraits (72x72, drawn 24x24 scaled 3x over elemental gradient skies):
+ *   1. portrait_orin (wise scholar glasses, silver locks & cyan scarf)
+ *   2. portrait_kael (spiky flame-orange rival hair & glowing amber tech-visor)
+ *   3. portrait_player (heroic young Tamer with emerald headband & gold crest)
+ *   4. portrait_warden (crimson cowl, sculpted porcelain mask & blazing crimson eyes)
+ *   5. portrait_umbravex (glowing purple Eclipse Apex silhouette & obsidian horns)
  *
- * - 3 Chapter Battle Arena Backdrops (640x360 pixel art):
- *   1. bg_arena_azure (wide moonlit turquoise bay, layered pixel ocean waves, coastal rock arches & lighthouse silhouette)
- *   2. bg_arena_ignis (wide volcanic caldera, jagged basalt cliffs, glowing magma rivers & drifting ember ash)
- *   3. bg_arena_eclipse (wide violet-indigo cosmos, colossal fractured Eclipse Rift portal glowing in the sky, floating obsidian ruins)
+ * - 4 Dynamic 3/4 Full-Body Standing Trainer Sprites (56x64, drawn 28x32 scaled 2x, 2 frames each):
+ *   1. char_mc_0 / char_mc_1 (Young Tamer hero holding glowing Rift Orb)
+ *   2. char_orin_0 / char_orin_1 (Prof. Orin holding holographic cyan datapad)
+ *   3. char_kael_0 / char_kael_1 (Rival Kael in cocky pointing stance with billowing cape)
+ *   4. char_warden_0 / char_warden_1 (Rift Warden channeling levitating purple rift energy)
+ *
+ * - 3 Chapter Battle Arena Backdrops (640x360 clean panoramic pixel art):
+ *   1. bg_arena_azure
+ *   2. bg_arena_ignis
+ *   3. bg_arena_eclipse
  */
 
 /**
@@ -40,195 +46,724 @@ function createOrGetCanvasTexture(scene, key, width, height) {
 }
 
 // ============================================================================
-// 16x16 Pixel Matrices & Palettes for 48x48 Character Portraits
+// 24x24 Pixel Matrices & Palettes for HD 72x72 Character Portraits (3x scale)
 // ============================================================================
 const PORTRAIT_DEFINITIONS = {
-  // Prof. Orin: Wise scholar glasses & cyan scarf
+  // Prof. Orin: Silver scholar hair, gleaming glasses, cyan scarf & crisp lab coat
   portrait_orin: {
     accentColor: 0x38bdf8,
+    rimColor: '#38bdf8',
+    rimLight: '#bae6fd',
+    sky: ['#041320', '#0a2d47', '#0e5875'],
+    motes: [
+      [3, 4, '#67e8f9'],
+      [20, 3, '#bae6fd'],
+      [19, 8, '#38bdf8'],
+      [4, 11, '#7dd3fc'],
+    ],
     palette: {
-      '.': '#090e17', // Dark frame background
-      'B': '#020617', // Dark frame border
-      'R': '#38bdf8', // Elemental rim (cyan)
-      'H': '#94a3b8', // Silver scholar hair
-      'h': '#f1f5f9', // Hair highlight
-      'S': '#fde68a', // Skin tone
+      '.': null,
+      'O': '#040a14', // Crisp dark outline
+      'H': '#94a3b8', // Silver scholar hair midtone
+      'h': '#cbd5e1', // Silver hair light
+      'W': '#f8fafc', // Specular white highlight
+      'd': '#64748b', // Hair deep shadow
+      'S': '#fde68a', // Warm skin
       's': '#f59e0b', // Skin shadow
-      'G': '#cbd5e1', // Glasses frame
-      'g': '#ffffff', // Glasses lens glare
-      'E': '#0284c7', // Eye iris
-      'C': '#06b6d4', // Cyan scarf
+      'n': '#b45309', // Nose / mouth / chin accent
+      'G': '#e2e8f0', // Glasses metallic rim
+      'B': '#7dd3fc', // Glasses lens cyan tint
+      'E': '#0284c7', // Wise blue iris
+      'e': '#0f172a', // Eye pupil
+      'C': '#06b6d4', // Cyan scarf base
       'c': '#67e8f9', // Scarf highlight
-      'T': '#1e293b', // Scholar tunic
+      'k': '#0e7490', // Scarf deep fold
+      'L': '#f8fafc', // White lab coat collar
+      'l': '#cbd5e1', // Lab coat shade
+      'T': '#1e293b', // Dark scholar tunic
     },
     grid: [
-      'BBBBBBBBBBBBBBBB',
-      'BRRHHHHHHHHHHRRB',
-      'BRHHhhHHHHhhHHRB',
-      'BHHhhhHHHHhhhHHB',
-      'BHHHHHHHHHHHHHHB',
-      'BHHSSSSSSSSSSHHB',
-      'BHHSSGGSSSSGGSHB',
-      'BHSGgEGSSGgEGSHB',
-      'BHHSSGGSSSSGGSHB',
-      'BHHSSSSssSSSSHHB',
-      'BBHHSSssssSSHHBB',
-      'BRHHSSSSSSSSHHRB',
-      'BRRCCccCCccCCRRB',
-      'BTCCccccccccCCTB',
-      'BTTTCCCCCCCCTTTB',
-      'BBBBBBBBBBBBBBBB',
+      '........................',
+      '........OOOOOOOO........',
+      '......OOWhhhhhhHOO......',
+      '.....OWhhhWWWWWhHHO.....',
+      '....OHWhhhHHHHhhhHHO....',
+      '....OHhhHdHHHHdHhhHO....',
+      '...OOHHdHddHHddHHdHOO...',
+      '...OHdHHSSSSSSSSHHdHO...',
+      '...OHHSShSSSSSShSSHHO...',
+      '...OHSSGGGGSSGGGGSSHO...',
+      '...OOSGWBEGSSGWBEGSOO...',
+      '...OOSGBeeGSSGBeeGSOO...',
+      '....OSSGGGGSSGGGGSSO....',
+      '....OSSssssSSssssSSO....',
+      '.....OSSsSSnnSSsSSO.....',
+      '......OSSSnnnnSSSO......',
+      '.....OOOsSSSSSSsOOO.....',
+      '....OLlOkkcccckkOlLO....',
+      '...OLLlOkkCCCCkkOlLLO...',
+      '...OLLlOCccCCccCOlLLO...',
+      '..OLLlLOkCCccCCkOLlLLO..',
+      '..OLLlLOTTkkkkTTOLlLLO..',
+      '..OLLlLOTTCCCCCTOLlLLO..',
+      '........................',
     ],
   },
 
-  // Kael: Spiky fiery rival hair & tech visor
+  // Rival Kael: Spiky flame-orange hair, glowing amber tech-visor, cocky smirk & crimson-trimmed jacket
   portrait_kael: {
     accentColor: 0xf97316,
+    rimColor: '#f97316',
+    rimLight: '#fde047',
+    sky: ['#160603', '#471208', '#8a250d'],
+    motes: [
+      [3, 5, '#fde047'],
+      [20, 4, '#fb923c'],
+      [21, 10, '#fde047'],
+      [3, 12, '#f97316'],
+    ],
     palette: {
-      '.': '#140804', // Dark background
-      'B': '#050201', // Dark border
-      'R': '#f97316', // Elemental rim (fiery orange)
-      'H': '#ea580c', // Fiery spiky hair
-      'h': '#fde047', // Flame hair highlight
-      'S': '#fed7aa', // Skin
-      's': '#fb923c', // Skin shadow
-      'V': '#f59e0b', // Visor body
-      'v': '#ffffff', // Visor shine
-      'M': '#991b1b', // Smirk mouth
-      'J': '#18181b', // Dark collar jacket
-      'j': '#f97316', // Orange jacket trim
+      '.': null,
+      'O': '#070201', // Crisp outline
+      'H': '#ea580c', // Flame orange hair
+      'h': '#f97316', // Bright orange highlight
+      'Y': '#fde047', // Flame tip yellow
+      'd': '#9a3412', // Hair shadow
+      'S': '#fed7aa', // Warm skin
+      's': '#fb923c', // Skin shade
+      'n': '#c2410c', // Nose/jaw accent
+      'V': '#f59e0b', // Amber tech visor
+      'v': '#fde047', // Visor glow
+      'W': '#ffffff', // Visor glare streak
+      'u': '#78350f', // Visor frame rim
+      'M': '#7f1d1d', // Smirk outline
+      'J': '#18181b', // Obsidian jacket
+      'j': '#3f3f46', // Jacket highlight
+      'R': '#ef4444', // Crimson trim
+      'r': '#b91c1c', // Crimson shade
+      'G': '#facc15', // Gold clasp
     },
     grid: [
-      'BBBBBBBBBBBBBBBB',
-      'BRRH.HH..HH.HRRB',
-      'BRHHHhHHHhHHHHHR',
-      'BHHhhhHHhhhHHHHB',
-      'BHhhhhHhhhhhHHHB',
-      'BHHHHHHHHHHHHHHB',
-      'BHHSSSSSSSSSSHHB',
-      'BHSVvvVVSSVvvVSH',
-      'BHSVVVVVSSVVVVSH',
-      'BHHSSSSSSSSSSHHB',
-      'BBHHSSSSMMSSHHBB',
-      'BRHHSSSSSSSSHHRB',
-      'BRRJJJJjjJJJJRRB',
-      'BJJJJJjjjjJJJJJB',
-      'BJJJJJJjjJJJJJJB',
-      'BBBBBBBBBBBBBBBB',
+      '........................',
+      '.....OYO...OO...OYO.....',
+      '....OYhHO.OYYO.OHhYO....',
+      '...OYhHHHOYhhYOHHHhYO...',
+      '..OOdHHHHhhHHhhHHHHdOO..',
+      '...OdhHHHhhHHhhHHHhdO...',
+      '...OdHHhHHdHHdHHhHHdO...',
+      '....OHdHSSSSSSSShdHO....',
+      '....OHSSsSSSSSSsSSHO....',
+      '...OOSuuuuuuuuuuuuSOO...',
+      '...OOSuWWvvVVWWvvVSOO...',
+      '...OOSuVVWWvvVVWWvSOO...',
+      '....OSsuuuuuuuuuusSO....',
+      '....OSSSSSSnSSSSSSSO....',
+      '.....OSSsSSMMMWsSSO.....',
+      '......OSSSsnnnSSSO......',
+      '....OOJOsSSSSSSsOJOO....',
+      '...OJJROOssssssOORJJO...',
+      '...OJjRROOJJJJOORRjJO...',
+      '..OJJjRrROJGGOORrRjJJO..',
+      '..OJJjJJrOJJJJOJrJJjJO..',
+      '..OJJjJJROJjjJORJJJjJO..',
+      '..OJJJJJROJJJJORJJJJJO..',
+      '........................',
     ],
   },
 
-  // Player: Heroic young Tamer with headband
+  // Young Tamer Hero: Windswept chestnut hair, emerald headband + gold crest, expressive cyan eyes, scarf
   portrait_player: {
     accentColor: 0x22c55e,
+    rimColor: '#22c55e',
+    rimLight: '#86efac',
+    sky: ['#03150e', '#083a28', '#0f6a4b'],
+    motes: [
+      [3, 4, '#86efac'],
+      [20, 5, '#fef08a'],
+      [19, 11, '#34d399'],
+      [4, 13, '#6ee7b7'],
+    ],
     palette: {
-      '.': '#06130b', // Background
-      'B': '#020a05', // Dark border
-      'R': '#22c55e', // Elemental rim (nature green)
-      'H': '#78350f', // Chestnut adventurer hair
+      '.': null,
+      'O': '#040b07', // Crisp dark outline
+      'H': '#78350f', // Chestnut hair
       'h': '#b45309', // Hair highlight
-      'D': '#15803d', // Green headband
-      'd': '#facc15', // Headband gold emblem
+      'w': '#d97706', // Warm hair sheen
+      'd': '#451a03', // Hair deep shadow
+      'D': '#15803d', // Emerald headband
+      'g': '#22c55e', // Headband highlight
+      'Y': '#facc15', // Gold crest
+      'y': '#fef08a', // Gold crest glint
       'S': '#fde68a', // Skin
-      's': '#f59e0b', // Skin shadow
-      'E': '#0f172a', // Eye pupil
-      'e': '#ffffff', // Eye shine
-      'i': '#38bdf8', // Iris
-      'T': '#047857', // Hero tunic
-      't': '#a7f3d0', // Collar trim
+      's': '#f59e0b', // Skin shade
+      'n': '#b45309', // Expression/mouth accent
+      'E': '#0f172a', // Upper lash / pupil
+      'i': '#0284c7', // Iris deep
+      'I': '#38bdf8', // Iris bright glow
+      'W': '#ffffff', // Eye specular shine
+      'C': '#1e3a8a', // Navy scarf
+      'c': '#0284c7', // Scarf mid cyan
+      'b': '#38bdf8', // Scarf highlight
+      'T': '#047857', // Emerald jacket
+      't': '#34d399', // Jacket bright trim
     },
     grid: [
-      'BBBBBBBBBBBBBBBB',
-      'BRRHHHHHHHHHHRRB',
-      'BRHHhhHHHHhhHHRB',
-      'BHHhhhHHHHhhhHHB',
-      'BHDDDDddddDDDDHB',
-      'BHDDDDddddDDDDHB',
-      'BHHSSSSSSSSSSHHB',
-      'BHHSEieSSSEieSHB',
-      'BHHSEiSSSSSEiSHB',
-      'BHHSSSSSSSSSSHHB',
-      'BBHHSSSSssSSHHBB',
-      'BRHHSSSSSSSSHHRB',
-      'BRRttttttttttRRB',
-      'BTTTTTTttTTTTTTB',
-      'BTTTTTTTTTTTTTTB',
-      'BBBBBBBBBBBBBBBB',
+      '........................',
+      '.......OOOOOOOOOO.......',
+      '.....OOHwhhhhhhwHOO.....',
+      '....OHwwhHHHHHHhwwHO....',
+      '...OHhHHhHddddHhHHhHO...',
+      '...ODgggDDYYYYDDgggDO...',
+      '...ODDDDDDYyyYDDDDDDO...',
+      '...OHdHHSSSSSSSSHHdHO...',
+      '...OHHSSsSSSSSSsSSHHO...',
+      '...OHSSEEEssssEEESSHO...',
+      '...OOSEWEEssssEWEEsOO...',
+      '...OOSEIiEssssEIiEsOO...',
+      '....OSSssSSSSSSssSSO....',
+      '....OSSSSSSnSSSSSSSO....',
+      '.....OSSsSSnnSSsSSO.....',
+      '......OSSSssssSSSO......',
+      '....OOCOsSSSSSSsOCOO....',
+      '...OTtOCbbccccbbCOtTO...',
+      '...OTtOCCcCCCCcCCOtTO...',
+      '..OTTtOCbbCCCCbbCOtTTO..',
+      '..OTTtOOCCCCCCCCOOtTTO..',
+      '..OTTtTTOcbbbbccOTtTTO..',
+      '..OTTTTTOTTTTTTTOTTTTO..',
+      '........................',
     ],
   },
 
-  // Rift Warden: Masked crimson Rift Warden
+  // Rift Warden: Deep crimson cowl, sculpted porcelain mask, blazing crimson eyes & runic obsidian pauldrons
   portrait_warden: {
     accentColor: 0xef4444,
+    rimColor: '#ef4444',
+    rimLight: '#fca5a5',
+    sky: ['#130206', '#3d0812', '#6e131e'],
+    motes: [
+      [3, 4, '#f87171'],
+      [20, 4, '#c084fc'],
+      [20, 12, '#ef4444'],
+      [3, 13, '#fca5a5'],
+    ],
     palette: {
-      '.': '#130407', // Background
-      'B': '#060103', // Dark border
-      'R': '#ef4444', // Elemental rim (crimson)
-      'C': '#7f1d1d', // Crimson hood/cowl
-      'c': '#450a0a', // Hood fold shade
-      'M': '#f8fafc', // Porcelain mask base
-      'm': '#94a3b8', // Mask shade
-      'E': '#dc2626', // Crimson eye slit
-      'e': '#fca5a5', // Eye flare
+      '.': null,
+      'O': '#050103', // Void outline
+      'C': '#7f1d1d', // Crimson cowl
+      'c': '#b91c1c', // Hood highlight
+      'r': '#dc2626', // Bright crimson rim
+      'D': '#450a0a', // Deep cowl shadow
+      'M': '#f8fafc', // Porcelain mask white
+      'm': '#cbd5e1', // Mask cheek contour
+      'n': '#64748b', // Mask shadow/seam
+      'E': '#dc2626', // Blazing eye slit
+      'e': '#f87171', // Eye flare
+      'W': '#ffffff', // Eye core spark
       'P': '#18181b', // Obsidian pauldron
-      'p': '#b91c1c', // Pauldron rune
+      'p': '#3f3f46', // Armor rim light
+      'R': '#ef4444', // Glowing pauldron rune
+      'K': '#09090b', // Abyss cloak
     },
     grid: [
-      'BBBBBBBBBBBBBBBB',
-      'BRRCCCCCCCCCCRRB',
-      'BRCCCCCCCCCCCCRB',
-      'BCCccccccccccCCB',
-      'BCCcMMMMMMMMcCCB',
-      'BCcMMMMMMMMMMcCB',
-      'BCcMMEeMMMEeMcCB',
-      'BCcMMEEMMMEEMcCB',
-      'BCcMMMMmmMMMMcCB',
-      'BCCcMMmmmmMMcCCB',
-      'BBCCcMMMMMMcCCBB',
-      'BRCCCccccccCCCRB',
-      'BRRPPPPppPPPPRRB',
-      'BPPPPPppppPPPPPB',
-      'BPPPPPPPPPPPPPPB',
-      'BBBBBBBBBBBBBBBB',
+      '........................',
+      '.........OOOOOO.........',
+      '.......OOcrCCrcOO.......',
+      '......OCccCCCCccCO......',
+      '.....OCcCCDDDDCCcCO.....',
+      '....OCcCDDOOOODDCcCO....',
+      '....OCCDOmMMMMmODCCO....',
+      '...OCCDOmMMMMMMmODCCO...',
+      '...OCDDOMMMnnMMMODDCO...',
+      '...OCDOMmEEmmEEmMODCO...',
+      '...OCDOMeWEmmEWeMODCO...',
+      '...OCDOMmEEmmEEmMODCO...',
+      '...OCDDOMmMnnMmMODDCO...',
+      '....OCDOMmmnnmmMODCO....',
+      '....OCDDOMmMMmMODDCO....',
+      '.....OCDDOMmmMODDCO.....',
+      '....OOPCDDOOOODDCPOO....',
+      '...OPpPPDDCCCCDDPPpPO...',
+      '..OPpRPPPKKKKKKPPPRpPO..',
+      '..OPPRPPPKKCCKKPPPRPPO..',
+      '..OPpPPPOKKrrKKOPPPpPO..',
+      '..OPPPPOKKKrrKKKOPPPPO..',
+      '..OPPPPOKKKKKKKKOPPPPO..',
+      '........................',
     ],
   },
 
-  // Umbravex: Glowing purple Eclipse Apex silhouette
+  // Umbravex: Eclipse Apex obsidian dragon/void silhouette, twin luminous horns, blazing cosmic eyes
   portrait_umbravex: {
     accentColor: 0xa855f7,
+    rimColor: '#a855f7',
+    rimLight: '#e9d5ff',
+    sky: ['#05010d', '#1c0538', '#420c70'],
+    motes: [
+      [11, 3, '#e9d5ff'],
+      [12, 3, '#c084fc'],
+      [4, 10, '#c084fc'],
+      [19, 10, '#e9d5ff'],
+      [3, 15, '#a855f7'],
+      [20, 15, '#a855f7'],
+    ],
     palette: {
-      '.': '#080210', // Dark background
-      'B': '#030006', // Border
-      'R': '#a855f7', // Elemental rim (purple)
-      'H': '#3b0764', // Obsidian horns
-      'h': '#d8b4fe', // Horn tip glow
-      'V': '#0f0520', // Void shadow silhouette
-      'v': '#2e1065', // Void body shade
-      'E': '#c084fc', // Glowing apex eye
-      'e': '#ffffff', // Eye core spark
-      'A': '#7e22ce', // Eclipse aura
-      'a': '#e9d5ff', // Aura sparkle
+      '.': null,
+      'O': '#030008', // Abyss outline
+      'H': '#3b0764', // Obsidian horn body
+      'h': '#7e22ce', // Horn luminous ridge
+      'A': '#a855f7', // Violet aura / crystal glow
+      'a': '#d8b4fe', // Bright lilac tip
+      'W': '#ffffff', // Star-bright core
+      'V': '#0f0520', // Void body silhouette
+      'v': '#240b4c', // Void armor facet
+      'U': '#4c1d95', // Cosmic rim light
+      'E': '#c084fc', // Blazing apex eye
+      'e': '#f3e8ff', // Eye glow halo
     },
     grid: [
-      'BBBBBBBBBBBBBBBB',
-      'BRRH........HRRB',
-      'BRhHH......HHhRB',
-      'BhHHHH....HHHHhB',
-      'BHHHVVVVVVVVHHHB',
-      'B.HVVvvvvvvVVH.B',
-      'B.VVvEeAAEeavV.B',
-      'BAVVvEEAAvEEvVAB',
-      'BaVVVvvvvvvVVVaB',
-      'B.VVVVvvvvVVVV.B',
-      'BB.VVVVVVVVVV.BB',
-      'BRA.VVVVVVVV.ARB',
-      'BRRaVVVvvVVVaRRB',
-      'BVVVVVvvvvVVVVVB',
-      'BVVVVVVVVVVVVVVB',
-      'BBBBBBBBBBBBBBBB',
+      '........................',
+      '..OAO..............OAO..',
+      '..OaHO............OHaO..',
+      '...OahO..........OhaO...',
+      '...OHAhO..OOOO..OHAHO...',
+      '....OHhHOVUUUUUOHhHO....',
+      '....OOHHVVvAAvVVHHOO....',
+      '.....OOVVvAeeAvVVOO.....',
+      '.....OVVVvvAAvvVVVO.....',
+      '....OVVvEEvvvvEEvVVO....',
+      '....OVvEeWEvvEWeEvVO....',
+      '....OVVVvEEvvEEvVVVO....',
+      '.....OVVVvvvvvvVVVO.....',
+      '.....OOVVvUvvUvVVOO.....',
+      '......OVVVvUUvVVVO......',
+      '.....OAVVVvvvvVVVAO.....',
+      '....OAhOVVVVVVVVOhAO....',
+      '...OVUUVVVvAAvVVVUUVO...',
+      '...OVVvVVvAeeAvVVvVVO...',
+      '..OVVvVVVVvAAvVVVVvVVO..',
+      '..OVVVVVVVvvvvVVVVVVVO..',
+      '..OVUvVVVVVvvVVVVVvUVO..',
+      '..OVVVVVVVVVVVVVVVVVVO..',
+      '........................',
     ],
   },
 };
+
+// ============================================================================
+// 28x32 Dynamic 3/4 Standing RPG Trainer Sprites (scaled 2x -> 56x64)
+// Drawn facing 3/4 RIGHT so Player stands on left and flipped enemies face left!
+// ============================================================================
+const STANDING_CHARACTER_DEFINITIONS = [
+  // 1. Player MC: Young Tamer hero in 3/4 heroic stance holding a glowing Rift Orb!
+  {
+    prefix: 'char_mc',
+    palette: {
+      '.': null,
+      'O': '#050811', // Dark outline
+      'H': '#78350f', // Chestnut hair
+      'h': '#b45309', // Hair highlight
+      'w': '#d97706', // Warm hair glint
+      'd': '#451a03', // Hair deep shade
+      'D': '#15803d', // Emerald headband
+      'g': '#22c55e', // Headband highlight
+      'Y': '#facc15', // Gold crest / belt buckle
+      'S': '#fde68a', // Skin
+      's': '#f59e0b', // Skin shade
+      'E': '#0f172a', // Eye pupil
+      'I': '#38bdf8', // Cyan iris / Rift Orb glow
+      'W': '#ffffff', // Specular white / Orb core
+      'C': '#1e3a8a', // Navy scarf shadow
+      'c': '#0284c7', // Cyan scarf mid
+      'b': '#38bdf8', // Scarf highlight
+      'T': '#047857', // Emerald adventurer jacket
+      't': '#10b981', // Jacket highlight
+      'm': '#064e3b', // Jacket shadow
+      'U': '#f1f5f9', // Inner tunic cream
+      'u': '#cbd5e1', // Inner tunic shade
+      'P': '#1e293b', // Adventurer trousers
+      'p': '#334155', // Trousers highlight
+      'B': '#451a03', // Sturdy leather boots
+      'k': '#92400e', // Boot cuff / highlight
+      'Q': '#7dd3fc', // Rift Orb outer aura spark
+    },
+    frames: [
+      // Frame 0: Heroic 3/4 stance, scarf flowing back-left, right hand holding glowing Rift Orb
+      [
+        '............................',
+        '.........OOOOOOOO...........',
+        '.......OOHwhhhhhHOO.........',
+        '......OHwwHHHHHHhhHO........',
+        '.....OHhHddHHHHhHHhHO.......',
+        '.....ODggDDDYYYDDggDO.......',
+        '......OHdHHSSSSSSHHHO.......',
+        '......OHHSSsSSEISSSHO.......',
+        '.......OSSSssSEWSSSO........',
+        '.......OOSSssSSSSSO.........',
+        '....OOOOOOCCbbccCO..........',
+        '..OOcbbCCCcCCCCcCCO.........',
+        '.OCbcCCCCOmmTTtTTtOO....Q...',
+        '..OOOCOOOmTTtUUTTtTO...OIQ..',
+        '......O.OmTTuUUTTTtOO.OIWO..',
+        '........OmTTtUUTTTStOOIWIO..',
+        '.......OOmTTtUUTTttSOOIIO...',
+        '.......OSOmTYTYTTmOO..OO....',
+        '.......OOmTTTTTTTmmO........',
+        '........OOmPPPPPmmO.........',
+        '........OOpPPpPPpPO.........',
+        '........OpPPPOOPpPO.........',
+        '.......OOpPPO..OpPPO........',
+        '.......OpPPO....OpPPO.......',
+        '.......OpPO......OpPO.......',
+        '......OOkBO......OOkBO......',
+        '......OBkBO......OBkBO......',
+        '.....OBBBBO......OBBBBO.....',
+        '.....OBBBBOO.....OBBBBOO....',
+        '.....OOOOOOO.....OOOOOOO....',
+        '............................',
+        '............................',
+      ],
+      // Frame 1: Breathing bob, scarf flutters upward, Rift Orb pulses brighter with sparks!
+      [
+        '............................',
+        '............................',
+        '.........OOOOOOOO...........',
+        '.......OOHwhhhhhHOO.........',
+        '......OHwwHHHHHHhhHO........',
+        '.....OHhHddHHHHhHHhHO.......',
+        '.....ODggDDDYYYDDggDO.......',
+        '......OHdHHSSSSSSHHHO.......',
+        '......OHHSSsSSEISSSHO.......',
+        '..OOOO.OSSSssSEWSSSO........',
+        '.OCbbcOOOOCCbbccCO.....Q....',
+        'OCbbCCCCCCCcCCCCcCO...QWQ...',
+        '.OOCCCOOOmmTTtTTtOO..QOWOQ..',
+        '......O.OmTTtUUTTtTO.OIWIO..',
+        '........OmTTuUUTTTtOOOWWIO..',
+        '........OmTTtUUTTTStOOIIOQ..',
+        '.......OOmTTtUUTTttSOOQQO...',
+        '.......OSOmTYTYTTmOO........',
+        '.......OOmTTTTTTTmmO........',
+        '........OOmPPPPPmmO.........',
+        '........OOpPPpPPpPO.........',
+        '........OpPPPOOPpPO.........',
+        '.......OOpPPO..OpPPO........',
+        '.......OpPPO....OpPPO.......',
+        '.......OpPO......OpPO.......',
+        '......OOkBO......OOkBO......',
+        '......OBkBO......OBkBO......',
+        '.....OBBBBO......OBBBBO.....',
+        '.....OBBBBOO.....OBBBBOO....',
+        '.....OOOOOOO.....OOOOOOO....',
+        '............................',
+        '............................',
+      ],
+    ],
+  },
+
+  // 2. Prof. Orin: 3/4 scholar stance, silver hair, gleaming glasses, crisp lab coat, glowing cyan datapad
+  {
+    prefix: 'char_orin',
+    palette: {
+      '.': null,
+      'O': '#050811', // Crisp outline
+      'H': '#94a3b8', // Silver hair
+      'h': '#cbd5e1', // Hair highlight
+      'W': '#ffffff', // Specular white / hologram core
+      'd': '#64748b', // Hair shade
+      'S': '#fde68a', // Skin
+      's': '#f59e0b', // Skin shade
+      'G': '#e2e8f0', // Glasses frame
+      'E': '#0284c7', // Eye iris
+      'C': '#06b6d4', // Cyan scarf
+      'c': '#67e8f9', // Scarf highlight
+      'k': '#0e7490', // Scarf shade
+      'L': '#f8fafc', // White lab coat
+      'l': '#e2e8f0', // Lab coat mid
+      'a': '#94a3b8', // Lab coat fold shade
+      'T': '#1e293b', // Dark scholar tunic
+      't': '#334155', // Tunic highlight
+      'D': '#0e7490', // Datapad body
+      'q': '#38bdf8', // Datapad / hologram glow
+      'Q': '#bae6fd', // Bright hologram pixel
+      'P': '#334155', // Trousers
+      'p': '#475569', // Trousers highlight
+      'B': '#1e293b', // Dress shoes
+      'b': '#475569', // Shoe highlight
+    },
+    frames: [
+      // Frame 0: Composed 3/4 scholar stance holding glowing holographic cyan datapad
+      [
+        '............................',
+        '.........OOOOOOOO...........',
+        '.......OOWhhhhhhOO..........',
+        '......OWhhWWWWWWhHO.........',
+        '.....OHhHddHHHHhHHO.........',
+        '.....OHdHHSSSSSSHHHO........',
+        '......OHSSGGSSGGSSHO........',
+        '......OHSGWEsSGWESSHO.......',
+        '.......OSSGGSSGGSSO.........',
+        '.......OOSSssssSSO..........',
+        '.......OOkkcccckkOO....Q....',
+        '......OLLOkCCCCkOLLO..qQq...',
+        '.....OLlLOcCccCcOLlO..qWq...',
+        '.....OLlLOTtTTtTOLlO.ODqDO..',
+        '....OLlaLOTtTTtTOLLSOOWqDO..',
+        '....OLlaLOTTTTTTOLLSOOqDDO..',
+        '....OLlaLOTtTTtTOLLlOODDO...',
+        '....OLlaLOTTTTTTOLllOO......',
+        '....OLlaLOLlTTlLOLllO.......',
+        '....OLlLLOLlPPlLOLllO.......',
+        '....OLlaLOPpPPpPOLllO.......',
+        '....OLlaLOPpOOPpOalLO.......',
+        '....OLllLOPpO.OpPOalO.......',
+        '.....OLlLOPpO.OpPOaO........',
+        '.....OOO.OPpO..OpPO.........',
+        '.........OPpO..OpPO.........',
+        '........OOBbO..OOBbO........',
+        '........OBBBO..OBBBO........',
+        '.......OBBBBOO.OBBBBOO......',
+        '.......OOOOOOO.OOOOOOO......',
+        '............................',
+        '............................',
+      ],
+      // Frame 1: Hologram screen pulses taller & brighter, scarf and lab coat hem shift gently
+      [
+        '............................',
+        '............................',
+        '.........OOOOOOOO...........',
+        '.......OOWhhhhhhOO..........',
+        '......OWhhWWWWWWhHO.........',
+        '.....OHhHddHHHHhHHO.........',
+        '.....OHdHHSSSSSSHHHO........',
+        '......OHSSGGSSGGSSHO........',
+        '......OHSGWWsSGWWSSHO.......',
+        '.......OSSGGSSGGSSO...q.Q...',
+        '......OOOkkcccckkOO..QWQq...',
+        '.....OckLOkCCCCkOLLO.qQQq...',
+        '....OLlLOcCccCcOLlO..qWq....',
+        '....OLlLOTtTTtTOLlO..ODqDO..',
+        '....OLlaLOTtTTtTOLLSOOWWDO..',
+        '....OLlaLOTTTTTTOLLSOOqQDO..',
+        '....OLlaLOTtTTtTOLLlOODDO...',
+        '....OLlaLOTTTTTTOLllOO......',
+        '....OLlaLOLlTTlLOLllO.......',
+        '...OOLlLLOLlPPlLOLllO.......',
+        '...OLllaLOPpPPpPOLllO.......',
+        '...OLllaLOPpOOPpOalLO.......',
+        '....OLllLOPpO.OpPOalO.......',
+        '.....OLlLOPpO.OpPOaO........',
+        '.....OOO.OPpO..OpPO.........',
+        '.........OPpO..OpPO.........',
+        '........OOBbO..OOBbO........',
+        '........OBBBO..OBBBO........',
+        '.......OBBBBOO.OBBBBOO......',
+        '.......OOOOOOO.OOOOOOO......',
+        '............................',
+        '............................',
+      ],
+    ],
+  },
+
+  // 3. Rival Kael: Cocky 3/4 battle stance, spiky flame hair, amber tech-visor, billowing cape, pointing!
+  {
+    prefix: 'char_kael',
+    palette: {
+      '.': null,
+      'O': '#070201', // Dark outline
+      'H': '#ea580c', // Flame orange hair
+      'h': '#f97316', // Hair highlight
+      'Y': '#fde047', // Yellow flame tips
+      'd': '#9a3412', // Hair shade
+      'S': '#fed7aa', // Skin
+      's': '#fb923c', // Skin shade
+      'V': '#f59e0b', // Amber visor
+      'v': '#fde047', // Visor bright
+      'W': '#ffffff', // Visor shine
+      'M': '#7f1d1d', // Confident smirk
+      'J': '#18181b', // Obsidian jacket
+      'j': '#3f3f46', // Jacket highlight
+      'R': '#dc2626', // Crimson trim / cape
+      'r': '#ef4444', // Bright crimson cape highlight
+      'K': '#7f1d1d', // Deep cape shadow
+      'G': '#facc15', // Gold buckle
+      'P': '#09090b', // Dark trousers
+      'p': '#27272a', // Trousers highlight
+      'B': '#27272a', // Combat boots
+      'b': '#71717a', // Metal boot clasp
+    },
+    frames: [
+      // Frame 0: Cocky stance, left hand on hip, right arm pointing forward-right, cape streaming left
+      [
+        '............................',
+        '......OYO....OO...OYO.......',
+        '.....OYhHO..OYYO.OHhO.......',
+        '....OYhHHHOOYhhYOHHHO.......',
+        '.....OdHHHHhhHHhhHHO........',
+        '......OHdHSSSSSShdHO........',
+        '......OHSVvWWVVvvVSO........',
+        '.......OSVVVVWWVVVSO........',
+        '.......OSSssSSMMSSO.........',
+        '.......OOSSssssSSO..........',
+        '.....OOORrRRRRrRROO.........',
+        '...OOKrRJJjRRjJJrRO.........',
+        '..OKrRRJJjJJJJjJJJOO........',
+        '.OKrKROJJjJJJJjJJJjOOOO.....',
+        '.OKKROOJJjJJJJjJJJJJjSSOO...',
+        'OKKRO.OSJjJJJJjJJJJOOSSSO...',
+        'OKRO..OSOJGJJGJJJOO..OOO....',
+        'OKO...OOORRRRRRROO..........',
+        '.O....OKOPPPPPPPO...........',
+        '.....OKROpPPpPPpO...........',
+        '.....OKROpPPOOPpPO..........',
+        '....OKROOpPO..OpPPO.........',
+        '....OKO.OpPO...OpPPO........',
+        '.....O..OpPO....OpPO........',
+        '.......OObBO....OObBO.......',
+        '.......OBbBO....OBbBO.......',
+        '......OBBBBO....OBBBBO......',
+        '......OBBBBOO...OBBBBOO.....',
+        '......OOOOOOO...OOOOOOO.....',
+        '............................',
+        '............................',
+        '............................',
+      ],
+      // Frame 1: Cape billows higher/wider, visor glare sweeps, hair tips & pointing hand shift!
+      [
+        '.....OYO.....OO....OYO......',
+        '....OYhHO...OYYO..OHhO......',
+        '....OYhHHHOOYhhYOHHHO.......',
+        '.....OdHHHHhhHHhhHHO........',
+        '......OHdHSSSSSShdHO........',
+        '......OHSVVVVvvWWVSO........',
+        '.......OSVWWVVVVvVSO........',
+        '.......OSSssSSMMSSO.........',
+        '.......OOSSssssSSO..........',
+        '....OOOORrRRRRrRROO.........',
+        '..OOKrRRJJjRRjJJrRO.........',
+        '.OKrRRRJJjJJJJjJJJOO........',
+        'OKrKKROJJjJJJJjJJJjOOOOO....',
+        'OKKKROOJJjJJJJjJJJJJjSSSO...',
+        'OKKRO.OSJjJJJJjJJJJOOSSOO...',
+        'OKRO..OSOJGJJGJJJOO..OOO....',
+        '.OKO..OOORRRRRRROO..........',
+        '..O..OKROPPPPPPPO...........',
+        '....OKRROpPPpPPpO...........',
+        '...OKKROOpPPOOPpPO..........',
+        '...OKRO.OpPO..OpPPO.........',
+        '....OO..OpPO...OpPPO........',
+        '........OpPO....OpPO........',
+        '.......OObBO....OObBO.......',
+        '.......OBbBO....OBbBO.......',
+        '......OBBBBO....OBBBBO......',
+        '......OBBBBOO...OBBBBOO.....',
+        '......OOOOOOO...OOOOOOO.....',
+        '............................',
+        '............................',
+        '............................',
+        '............................',
+      ],
+    ],
+  },
+
+  // 4. Rift Warden: Imposing hooded stance, porcelain mask, spiked pauldrons, levitating purple rift orb!
+  {
+    prefix: 'char_warden',
+    palette: {
+      '.': null,
+      'O': '#050103', // Abyss outline
+      'C': '#7f1d1d', // Crimson cowl
+      'c': '#b91c1c', // Cowl highlight
+      'D': '#450a0a', // Deep cowl shadow
+      'M': '#f8fafc', // Porcelain mask
+      'm': '#cbd5e1', // Mask shade
+      'E': '#dc2626', // Glowing crimson eye
+      'e': '#fca5a5', // Eye flare
+      'P': '#18181b', // Obsidian spiked armor
+      'p': '#3f3f46', // Armor edge highlight
+      'R': '#ef4444', // Crimson rune glow
+      'r': '#b91c1c', // Deep crimson rune shade
+      'K': '#09090b', // Abyss cloak
+      'k': '#1e1b2e', // Cloak fold highlight
+      'V': '#581c87', // Void purple mist
+      'v': '#9333ea', // Bright rift purple
+      'A': '#c084fc', // Levitating rift orb glow
+      'W': '#ffffff', // Rift energy white core
+    },
+    frames: [
+      // Frame 0: Imposing 3/4 stance, spiked shoulder pauldrons, right hand conjuring levitating rift orb
+      [
+        '............................',
+        '..........OOOOOO............',
+        '........OOccCCccOO..........',
+        '.......OCccCDDDccCO.........',
+        '......OCcDDOOOODDcCO........',
+        '......OCDOMMMMMMODCO........',
+        '......OCDOMeEMeEMOCO....v...',
+        '.......OCDOMmMmMODO....vAv..',
+        '.......OODDOCDDOOO....vAWA..',
+        '.....OPpOPDDDDDOPpO...vAv...',
+        '....OPpRPPDDDDPPRpPO...v....',
+        '...OPpRRPPKKKKPPRRpPO.......',
+        '....OOOPPKKKKKKPPpPO.OO.....',
+        '......OKKkKRRKkKPPPOOPpO....',
+        '......OKkKKRRKKkKKOOPpPO....',
+        '.....OKKkKKrrKKkKKKOOOPO....',
+        '.....OKkKKKKKKKKkKKO..O.....',
+        '....OKKkKKKKKKKKkKKO........',
+        '....OKkKKkKKKKkKKkKKO.......',
+        '...OKKkKKkKKKKkKKkKKO.......',
+        '...OKkKKKkKKKKkKKKkKKO......',
+        '...OKkKKKkKKKKkKKKkKKO......',
+        '..OKKkKKKKkKKkKKKKkKKO......',
+        '..OKkKKKKKkKKkKKKKKkKKO.....',
+        '..OKkKKKVkkkkkkVKKKKKKO.....',
+        '..OKKKKVVvkKKkvVVKKKKKO.....',
+        '..OKKKVvvVKKKKVvvVKKKKO.....',
+        '..OOKKVvVOKKKKOVvVKKOO......',
+        '...OOOOvOO.OO.OOvOOOO.......',
+        '......V..........V..........',
+        '............................',
+        '............................',
+      ],
+      // Frame 1: Rift orb expands & crackles, mask eyes flare, void mist and cloak billow!
+      [
+        '............................',
+        '..........OOOOOO............',
+        '........OOccCCccOO..........',
+        '.......OCccCDDDccCO.........',
+        '......OCcDDOOOODDcCO...v.A..',
+        '......OCDOMMMMMMODCO..vAWAv.',
+        '......OCDOMWEMWEMOCO..AWWWA.',
+        '.......OCDOMmMmMODO...vAWAv.',
+        '.......OODDOCDDOOO.....Avv..',
+        '.....OPpOPDDDDDOPpO....v....',
+        '....OPpRPPDDDDPPRpPO........',
+        '...OPpRRPPKKKKPPRRpPO.......',
+        '....OOOPPKKKKKKPPpPO.OO.....',
+        '......OKKkKRRKkKPPPOOPpO....',
+        '.....OKKkKKRRKKkKKOOPpPO....',
+        '.....OKkKKKrrKKkKKKOOOPO....',
+        '....OKKkKKKKKKKKkKKO..O.....',
+        '....OKkKKKKKKKKKkKKO........',
+        '...OKKkKKkKKKKkKKkKKO.......',
+        '...OKkKKKkKKKKkKKKkKKO......',
+        '..OKKkKKKkKKKKkKKKkKKO......',
+        '..OKkKKKKkKKKKkKKKKkKKO.....',
+        '..OKKkKKKKkKKkKKKKkKKKO.....',
+        '.OKKkKKKKKkKKkKKKKKkKKO.....',
+        '.OKkKKKVVvkkkkvVVKKKKKKO....',
+        '.OKKKKVVvvVkkVvvVVKKKKKO....',
+        '..OKKVvvAvVKKVvAvvVKKKO.....',
+        '..OOKVVvVOKKKKOVvVVKKO......',
+        '...OOOVvOO.OO.OOvVOOO.......',
+        '.....vA..........Av.........',
+        '............................',
+        '............................',
+      ],
+    ],
+  },
+];
 
 // ============================================================================
 // Procedural Canvas Drawing Functions for 3 Chapter Arena Backdrops (640x360)
@@ -287,7 +822,6 @@ function drawAzureArena(ctx) {
   }
 
   // 4. Distant Coastal Rock Arches & Sea Stacks & Lighthouse Silhouette
-  // Distant headland & sea stacks
   ctx.fillStyle = '#081d2d';
   ctx.beginPath();
   ctx.moveTo(0, 165);
@@ -320,10 +854,10 @@ function drawAzureArena(ctx) {
 
   // Lighthouse silhouette atop headland (X: 575)
   ctx.fillStyle = '#05131f';
-  ctx.fillRect(572, 85, 8, 30); // Tower shaft
-  ctx.fillRect(570, 80, 12, 6);  // Lantern room
+  ctx.fillRect(572, 85, 8, 30);
+  ctx.fillRect(570, 80, 12, 6);
   ctx.fillStyle = '#fef08a';
-  ctx.fillRect(572, 81, 8, 4);   // Luminous beacon lamp
+  ctx.fillRect(572, 81, 8, 4);
   // Beacon beam light cone across the bay
   ctx.fillStyle = 'rgba(254, 240, 138, 0.15)';
   ctx.beginPath();
@@ -410,13 +944,13 @@ function drawIgnisArena(ctx) {
   ctx.moveTo(0, 175);
   ctx.lineTo(50, 130);
   ctx.lineTo(110, 155);
-  ctx.lineTo(170, 105); // West caldera ridge
+  ctx.lineTo(170, 105);
   ctx.lineTo(220, 120);
-  ctx.lineTo(280, 90);  // Center-west caldera cone
+  ctx.lineTo(280, 90);
   ctx.lineTo(340, 135);
-  ctx.lineTo(410, 95);  // Central eruption peak
+  ctx.lineTo(410, 95);
   ctx.lineTo(470, 125);
-  ctx.lineTo(530, 85);  // East smoking caldera cone
+  ctx.lineTo(530, 85);
   ctx.lineTo(590, 140);
   ctx.lineTo(640, 125);
   ctx.lineTo(640, 185);
@@ -440,7 +974,6 @@ function drawIgnisArena(ctx) {
 
   // 3. Jagged Basalt Hexagonal Columns (Left & Right colonnades)
   ctx.fillStyle = '#1c1917';
-  // Left basalt colonnade (X: 0..80)
   for (let bx = 0; bx < 80; bx += 10) {
     const colH = 35 + ((bx * 13) % 25);
     ctx.fillRect(bx, 180 - colH, 9, colH + 20);
@@ -448,7 +981,6 @@ function drawIgnisArena(ctx) {
     ctx.fillRect(bx + 1, 180 - colH, 7, 2);
     ctx.fillStyle = '#1c1917';
   }
-  // Right basalt colonnade (X: 560..640)
   for (let bx = 560; bx < 640; bx += 10) {
     const colH = 38 + ((bx * 17) % 25);
     ctx.fillRect(bx, 180 - colH, 9, colH + 20);
@@ -467,11 +999,8 @@ function drawIgnisArena(ctx) {
 
   // 5. Glowing Magma Rivers across the floor
   const fissures = [
-    // Magma River 1 (Main jagged river across floor)
     [[0, 245], [55, 238], [120, 248], [195, 240], [280, 252], [370, 244], [460, 254], [550, 246], [640, 252]],
-    // Magma River 2 (Lower branching river)
     [[70, 275], [150, 285], [230, 276], [320, 290], [420, 280], [510, 292], [600, 284]],
-    // Magma River 3 (Forefront tributary)
     [[140, 320], [260, 335], [380, 325], [490, 338]],
   ];
   for (const line of fissures) {
@@ -557,7 +1086,6 @@ function drawEclipseArena(ctx) {
   ctx.fillRect(470, 92, 2, 2);
 
   // 3. Colossal Fractured Eclipse Rift Portal (Center Sky: 320, 75)
-  // Outer coronal flare
   ctx.fillStyle = '#4c1d95';
   ctx.beginPath();
   ctx.ellipse(320, 75, 96, 52, 0, 0, Math.PI * 2);
@@ -610,7 +1138,7 @@ function drawEclipseArena(ctx) {
     ctx.fillStyle = '#2e1065';
     ctx.fillRect(rx + 2, ry, rw - 4, 2);
     ctx.fillStyle = '#7e22ce';
-    ctx.fillRect(rx + rw / 2 - 1, ry + rh / 2 - 1, 2, 2); // Core rift rune
+    ctx.fillRect(rx + rw / 2 - 1, ry + rh / 2 - 1, 2, 2);
   }
 
   // 5. Cosmic Abyss Floor Base (y: 205..360, width 640)
@@ -640,13 +1168,89 @@ function drawEclipseArena(ctx) {
   // Open cosmic abyss arena floor (Dynamic battle platforms drawn cleanly by BattleScene)
 }
 
+/**
+ * Draws an HD 24x24 portrait (scaled 3x -> 72x72) with elemental gradient sky,
+ * atmospheric motes, shaded anime-pixel character art, and crisp framed rim.
+ */
+function drawPortraitCanvas(ctx, def, scale) {
+  const size = 24 * scale; // 72px
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, size, size);
+
+  // 1. Elemental Gradient Sky Backdrop
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, size);
+  skyGrad.addColorStop(0.0, def.sky[0]);
+  skyGrad.addColorStop(0.55, def.sky[1]);
+  skyGrad.addColorStop(1.0, def.sky[2]);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(scale, scale, size - scale * 2, size - scale * 2);
+
+  // Subtle horizontal pixel light bands for HD-2D depth
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.fillRect(scale, scale * 2, size - scale * 2, scale * 3);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.fillRect(scale, scale * 15, size - scale * 2, scale * 5);
+
+  // Atmospheric motes in sky behind character
+  if (Array.isArray(def.motes)) {
+    for (const [mx, my, mcol] of def.motes) {
+      ctx.fillStyle = mcol;
+      ctx.fillRect(mx * scale, my * scale, scale, scale);
+    }
+  }
+
+  // 2. Crisp 24x24 Expressive Anime-Pixel Character Art
+  for (let y = 0; y < 24; y++) {
+    const row = def.grid[y];
+    if (!row) continue;
+    for (let x = 0; x < 24; x++) {
+      const ch = row[x];
+      const color = def.palette[ch];
+      if (color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * scale, y * scale, scale, scale);
+      }
+    }
+  }
+
+  // 3. Outer Obsidian Frame + Glowing Elemental Corner Rims
+  ctx.fillStyle = '#04070f';
+  ctx.fillRect(0, 0, size, scale); // Top
+  ctx.fillRect(0, size - scale, size, scale); // Bottom
+  ctx.fillRect(0, 0, scale, size); // Left
+  ctx.fillRect(size - scale, 0, scale, size); // Right
+
+  // Elemental inner accent brackets at all 4 corners
+  ctx.fillStyle = def.rimColor;
+  // Top-left bracket
+  ctx.fillRect(scale, scale, scale * 3, scale);
+  ctx.fillRect(scale, scale, scale, scale * 3);
+  // Top-right bracket
+  ctx.fillRect(size - scale * 4, scale, scale * 3, scale);
+  ctx.fillRect(size - scale * 2, scale, scale, scale * 3);
+  // Bottom-left bracket
+  ctx.fillRect(scale, size - scale * 2, scale * 3, scale);
+  ctx.fillRect(scale, size - scale * 4, scale, scale * 3);
+  // Bottom-right bracket
+  ctx.fillRect(size - scale * 4, size - scale * 2, scale * 3, scale);
+  ctx.fillRect(size - scale * 2, size - scale * 4, scale, scale * 3);
+
+  // Specular glint on the 4 corner vertices
+  ctx.fillStyle = def.rimLight;
+  ctx.fillRect(scale, scale, scale, scale);
+  ctx.fillRect(size - scale * 2, scale, scale, scale);
+  ctx.fillRect(scale, size - scale * 2, scale, scale);
+  ctx.fillRect(size - scale * 2, size - scale * 2, scale, scale);
+}
+
 // ============================================================================
 // Main Registration Function (Exported)
 // ============================================================================
 
 /**
  * Registers all story campaign pixel textures:
- * - 5 Character Portraits (48x48)
+ * - 5 HD Character Portraits (72x72: 24x24 scaled 3x)
+ * - 4 Dynamic 3/4 Standing Trainer Sprites (56x64: 28x32 scaled 2x, 2 frames each)
  * - 3 Chapter Battle Arena Backdrops (640x360)
  *
  * Idempotent: Skips any texture that already exists in scene.textures.
@@ -657,367 +1261,52 @@ export function registerStoryTextures(scene) {
   if (!scene || !scene.textures) return;
 
   // --------------------------------------------------------------------------
-  // 1. Character Portraits (48x48: drawn 16x16 scaled 3x)
+  // 1. HD Character Portraits (72x72: drawn 24x24 scaled 3x)
   // --------------------------------------------------------------------------
-  const scale = 3;
-  const portraitSize = 16 * scale; // 48px
+  const portraitScale = 3;
+  const portraitSize = 24 * portraitScale; // 72px
 
   for (const [key, def] of Object.entries(PORTRAIT_DEFINITIONS)) {
     if (scene.textures.exists(key)) continue;
 
     const tex = createOrGetCanvasTexture(scene, key, portraitSize, portraitSize);
     if (tex && tex.context) {
-      const ctx = tex.context;
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, portraitSize, portraitSize);
-
-      for (let y = 0; y < 16; y++) {
-        const row = def.grid[y];
-        if (!row) continue;
-        for (let x = 0; x < 16; x++) {
-          const char = row[x];
-          const color = def.palette[char] ?? def.palette['.'];
-          if (color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x * scale, y * scale, scale, scale);
-          }
-        }
-      }
-
+      drawPortraitCanvas(tex.context, def, portraitScale);
       if (typeof tex.refresh === 'function') {
         tex.refresh();
       }
     } else if (typeof scene.make?.graphics === 'function') {
-      // Graphics fallback for environments lacking canvas context
       const g = scene.make.graphics({ x: 0, y: 0, add: false });
       g.fillStyle(0x0f172a, 1);
       g.fillRect(0, 0, portraitSize, portraitSize);
       g.fillStyle(def.accentColor, 1);
-      g.fillRect(6, 6, 36, 36);
+      g.fillRect(6, 6, portraitSize - 12, portraitSize - 12);
       g.generateTexture(key, portraitSize, portraitSize);
       g.destroy();
     }
   }
 
   // --------------------------------------------------------------------------
-  // 1b. Full-Body Standing Pixel-Art Characters (20x22 scaled 3x -> 60x66, 2 frames each)
-  // - char_mc_0 & char_mc_1: Player MC (Headband, emerald tunic, blue scarf)
-  // - char_orin_0 & char_orin_1: Prof. Orin (Silver hair, glasses, lab coat, cyan scarf, datapad)
-  // - char_kael_0 & char_kael_1: Rival Kael (Spiky fiery hair, visor, crimson-trimmed jacket, cape)
-  // - char_warden_0 & char_warden_1: Rift Warden (Crimson cowl, porcelain mask, glowing eyes, obsidian cloak)
+  // 1b. Dynamic 3/4 Full-Body Standing Trainer Sprites (28x32 scaled 2x -> 56x64)
   // --------------------------------------------------------------------------
-  const standingCharacters = [
-    {
-      prefix: 'char_mc',
-      palette: {
-        '.': null,
-        'O': '#050811', // Dark outline
-        'H': '#78350f', // Chestnut hair
-        'h': '#b45309', // Hair highlight
-        'D': '#16a34a', // Green headband
-        'd': '#facc15', // Gold headband emblem
-        'S': '#fde68a', // Skin
-        's': '#f59e0b', // Skin shade
-        'E': '#0f172a', // Eye pupil
-        'e': '#ffffff', // Eye shine
-        'i': '#38bdf8', // Blue iris
-        'T': '#047857', // Emerald Tamer tunic
-        't': '#34d399', // Tunic trim/highlight
-        'C': '#1e3a8a', // Adventurer cape/scarf
-        'c': '#38bdf8', // Scarf highlight
-        'G': '#f59e0b', // Belt buckle / Rift Orb pouch
-        'P': '#1e293b', // Trousers
-        'B': '#451a03', // Boots
-        'b': '#92400e', // Boot highlight
-      },
-      frames: [
-        [
-          '......OOOOOOOO......',
-          '.....OHHhHHhHHO.....',
-          '....OHHhhHHhhHHO....',
-          '....ODDDDddDDDDO....',
-          '....OHSSSSSSSSHO....',
-          '....OHSEiSSiESHO....',
-          '....OHSEeSSeESHO....',
-          '.....OSSSssSSSO.....',
-          '....OOcCCCCCCcOO....',
-          '...OCCtTTTTTTtCCO...',
-          '...OCOTTTTTTTTOCO...',
-          '...O.OSTTTTTTSO.O...',
-          '.....OSTTGTTTSO.....',
-          '.....OOTTTTTTOO.....',
-          '......OPPPPPPO......',
-          '......OPP..PPO......',
-          '......OPP..PPO......',
-          '......OPP..PPO......',
-          '.....OBbO..ObBO.....',
-          '.....OBBO..OBBO.....',
-          '.....OOOO..OOOO.....',
-          '....................',
-        ],
-        [
-          '....................',
-          '......OOOOOOOO......',
-          '.....OHHhHHhHHO.....',
-          '....OHHhhHHhhHHO....',
-          '....ODDDDddDDDDO....',
-          '....OHSSSSSSSSHO....',
-          '....OHSEiSSiESHO....',
-          '....OHSEeSSeESHO....',
-          '.....OSSSssSSSO.....',
-          '...OOccCCCCCCccOO...',
-          '..OCCTtTTTTTTtTCCO..',
-          '...O.OSTTTTTTSO.O...',
-          '.....OSTTGTTTSO.....',
-          '.....OOTTTTTTOO.....',
-          '......OPPPPPPO......',
-          '......OPP..PPO......',
-          '......OPP..PPO......',
-          '......OPP..PPO......',
-          '.....OBbO..ObBO.....',
-          '.....OBBO..OBBO.....',
-          '.....OOOO..OOOO.....',
-          '....................',
-        ],
-      ],
-    },
-    {
-      prefix: 'char_orin',
-      palette: {
-        '.': null,
-        'O': '#050811', // Dark outline
-        'H': '#94a3b8', // Silver scholar hair
-        'h': '#f1f5f9', // Hair highlight
-        'G': '#cbd5e1', // Glasses frame
-        'g': '#ffffff', // Glasses glare
-        'S': '#fde68a', // Skin tone
-        's': '#f59e0b', // Skin shade
-        'E': '#0284c7', // Eye iris
-        'C': '#06b6d4', // Cyan scarf
-        'c': '#67e8f9', // Scarf highlight
-        'L': '#f8fafc', // White lab coat
-        'l': '#cbd5e1', // Lab coat shade
-        'T': '#1e293b', // Scholar tunic
-        't': '#334155', // Tunic fold
-        'D': '#0891b2', // Datapad body
-        'd': '#38bdf8', // Datapad glowing screen
-        'W': '#ffffff', // Datapad screen glow
-        'w': '#bae6fd', // Datapad screen cyan glow
-        'P': '#334155', // Lab trousers
-        'B': '#1e293b', // Shoes
-        'b': '#475569', // Shoe highlight
-      },
-      frames: [
-        [
-          '......OOOOOOOO......',
-          '.....OHHhHHhHHO.....',
-          '....OHHhhHHhhHHO....',
-          '....OHHHHHHHHHHO....',
-          '....OHSSGGSSGGHO....',
-          '....OHSGgESGgEHO....',
-          '....OHSSGGSSGGHO....',
-          '.....OSSSssSSSO.....',
-          '....OOcCCCCCCcOO....',
-          '...OLLcCCCCCCLLlO...',
-          '..OLllLTtTTtTLllLO..',
-          '..OLLlLTtTTtTLddDO..',
-          '..OLSLlTllTTLSWdDO..',
-          '..OLLLlLLLLlLLllLO..',
-          '..OLLLlLL..LLlLLLO..',
-          '...OLLlPP..PPlLLO...',
-          '...OLllPP..PPlLLO...',
-          '....O.OPP..PPO.O....',
-          '.....OBbO..ObBO.....',
-          '.....OBBO..OBBO.....',
-          '.....OOOO..OOOO.....',
-          '....................',
-        ],
-        [
-          '....................',
-          '......OOOOOOOO......',
-          '.....OHHhHHhHHO.....',
-          '....OHHhhHHhhHHO....',
-          '....OHHHHHHHHHHO....',
-          '....OHSSGGSSGGHO....',
-          '....OHSGgESGgEHO....',
-          '....OHSSGGSSGGHO....',
-          '.....OSSSssSSSO.....',
-          '...OOccCCCCCCccOO...',
-          '..OLLccCCCCCCccLLlO.',
-          '..OLllLTtTTtTLllLO..',
-          '..OLLlLTtTTtTLdDDO..',
-          '..OLSLlTllTTLSwWDO..',
-          '..OLLLlLLLLlLLllLO..',
-          '..OLLLlLL..LLlLLLO..',
-          '...OLLlPP..PPlLLO...',
-          '....O.OPP..PPO.O....',
-          '.....OBbO..ObBO.....',
-          '.....OBBO..OBBO.....',
-          '.....OOOO..OOOO.....',
-          '....................',
-        ],
-      ],
-    },
-    {
-      prefix: 'char_kael',
-      palette: {
-        '.': null,
-        'O': '#050201', // Dark outline
-        'H': '#ea580c', // Fiery orange hair
-        'h': '#f97316', // Flame hair highlight
-        'Y': '#fde047', // Hair tip flame yellow
-        'V': '#f59e0b', // Golden tech visor body
-        'v': '#fef08a', // Visor shine flare
-        'S': '#fed7aa', // Skin
-        's': '#fb923c', // Skin shadow
-        'M': '#991b1b', // Smirk mouth
-        'J': '#18181b', // Dark jacket
-        'j': '#27272a', // Jacket highlight
-        'R': '#dc2626', // Crimson jacket trim
-        'r': '#ef4444', // Bright crimson trim
-        'K': '#b91c1c', // Rival cape trim
-        'G': '#f59e0b', // Golden belt buckle / badge
-        'P': '#09090b', // Trousers
-        'B': '#3f3f46', // Combat boots
-        'b': '#71717a', // Boot metal clasp
-      },
-      frames: [
-        [
-          '...YY....HH...YY....',
-          '..YhhH..HHHH.HhhY...',
-          '.OHHhhHHHHHHHHhhHO..',
-          '.OHHHHHHHHHHHHHHHO..',
-          '..OHHHSSSSSSSSHHHO..',
-          '..OHSSVvvVVvvVSSHO..',
-          '..OHSSVVVVVVVVSSHO..',
-          '...OSSSSMSSMSSSO....',
-          '...OORRrRRrRRrROO...',
-          '..OKJJJJRRRRJJJJO...',
-          '.OKKJJjjJJJJjjJJO...',
-          '.OK.OSJJJJJJJSO.O...',
-          '.....OSJJGJJSPO.....',
-          '.....OJJRRRRJJO.....',
-          '.....OKOPPPPPO......',
-          '....OK..OPP.PPO.....',
-          '........OPP.PPO.....',
-          '........OPP.PPO.....',
-          '.......OBbO.ObBO....',
-          '.......OBBO.OBBO....',
-          '.......OOOO.OOOO....',
-          '....................',
-        ],
-        [
-          '..YY.....HH....YY...',
-          '.YhhH...HHHH..HhhY..',
-          '.OHHhhHHHHHHHHhhHO..',
-          '.OHHHHHHHHHHHHHHHO..',
-          '..OHHHSSSSSSSSHHHO..',
-          '..OHSSVvvVVvvVSSHO..',
-          '..OHSSVVVVVVVVSSHO..',
-          '...OSSSSMSSMSSSO....',
-          '..OORRrRRrRRrROO....',
-          '.OKKJJJJRRRRJJJJO...',
-          'OKKKJJjjJJJJjjJJO...',
-          '.OK.OSJJJJJJJSO.O...',
-          '..K..OSJJGJJSPO.....',
-          '.....OJJRRRRJJO.....',
-          '....OKOPPPPPO.......',
-          '...OK...OPP.PPO.....',
-          '........OPP.PPO.....',
-          '........OPP.PPO.....',
-          '.......OBbO.ObBO....',
-          '.......OBBO.OBBO....',
-          '.......OOOO.OOOO....',
-          '....................',
-        ],
-      ],
-    },
-    {
-      prefix: 'char_warden',
-      palette: {
-        '.': null,
-        'O': '#060103', // Dark outline
-        'C': '#7f1d1d', // Crimson hood/cowl
-        'c': '#991b1b', // Bright hood highlight
-        'D': '#450a0a', // Deep hood shadow
-        'M': '#f8fafc', // Porcelain mask base
-        'm': '#cbd5e1', // Porcelain mask shadow
-        'E': '#dc2626', // Crimson eye slit
-        'e': '#fca5a5', // Eye flare spark
-        'P': '#18181b', // Obsidian pauldrons
-        'p': '#27272a', // Armor highlight
-        'R': '#b91c1c', // Pauldron rift rune
-        'K': '#09090b', // Dark abyss cloak
-        'k': '#18181b', // Cloak fold
-        'V': '#581c87', // Void rift mist
-      },
-      frames: [
-        [
-          '......OOOOOOOO......',
-          '.....OCccccCCDO.....',
-          '....OCccccccCDDO....',
-          '...OCCDccccCDDDCO...',
-          '...OCDDMMMMMMDDCO...',
-          '..OCDDMMmMMmMMMDCO..',
-          '..OCDDMmEeMMmEeMDCO.',
-          '..OCDDDMMMMMMDDCO...',
-          '..OODDDCCCCCDDDOO...',
-          '.OPpRPPDDDDDDPPRpPO.',
-          'OPppRPPKKKKKKPPRppPO',
-          'OPPppPOKKKKKKOPPppPO',
-          '.OOOO.OKKKKKKO.OOOO.',
-          '......OKKkKKkKO.....',
-          '.....OKKKkkKKKKO....',
-          '....OKKKKkkKKKKKO...',
-          '....OKKkKKKKkKKKO...',
-          '...OKKKkkKKkkKKKKO..',
-          '...OKKkKKKKKKkKKKO..',
-          '..OKKKkKVVVkKKKKKO..',
-          '..OOOOOVVVVVOOOOOO..',
-          '....................',
-        ],
-        [
-          '....................',
-          '......OOOOOOOO......',
-          '.....OCccccCCDO.....',
-          '....OCccccccCDDO....',
-          '...OCCDccccCDDDCO...',
-          '..OCDDMMMMMMDDCO....',
-          '..OCDDMmEeMMmEeMDCO.',
-          '..OCDDDMMMMMMDDCO...',
-          '..OODDDCCCCCDDDOO...',
-          '.OPpRPPDDDDDDPPRpPO.',
-          'OPppRPPKKKKKKPPRppPO',
-          'OPPppPOKKKkKkOPPppPO',
-          '.OOOO.OKKKkKkO.OOOO.',
-          '......OKkkKKkKO.....',
-          '.....OKKkkKKKKKO....',
-          '....OKKKkkKKKKKKO...',
-          '...OKKKkKKKKkKKKKO..',
-          '...OKKkkKKkkKKKKKO..',
-          '..OKKKkKKKKKKkKKKKO.',
-          '..OKKKkVVVVVVkKKKKO.',
-          '..OOOOOVVVVVVVOOOOO.',
-          '....................',
-        ],
-      ],
-    },
-  ];
+  const charScale = 2;
+  const charW = 28 * charScale; // 56px
+  const charH = 32 * charScale; // 64px
 
-  standingCharacters.forEach((charDef) => {
+  STANDING_CHARACTER_DEFINITIONS.forEach((charDef) => {
     charDef.frames.forEach((grid, frameIdx) => {
       const key = `${charDef.prefix}_${frameIdx}`;
       if (scene.textures.exists(key)) return;
-      const charScale = 3;
-      const w = 20 * charScale;
-      const h = 22 * charScale;
-      const tex = createOrGetCanvasTexture(scene, key, w, h);
+
+      const tex = createOrGetCanvasTexture(scene, key, charW, charH);
       if (tex && tex.context) {
         const ctx = tex.context;
         ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, w, h);
+        ctx.clearRect(0, 0, charW, charH);
+
         for (let y = 0; y < grid.length; y++) {
           const row = grid[y];
+          if (!row) continue;
           for (let x = 0; x < row.length; x++) {
             const col = charDef.palette[row[x]];
             if (col) {
@@ -1027,6 +1316,12 @@ export function registerStoryTextures(scene) {
           }
         }
         if (typeof tex.refresh === 'function') tex.refresh();
+      } else if (typeof scene.make?.graphics === 'function') {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0x0f172a, 1);
+        g.fillRect(8, 6, charW - 16, charH - 12);
+        g.generateTexture(key, charW, charH);
+        g.destroy();
       }
     });
   });
@@ -1050,7 +1345,6 @@ export function registerStoryTextures(scene) {
         tex.refresh();
       }
     } else if (typeof scene.make?.graphics === 'function') {
-      // Graphics fallback
       const g = scene.make.graphics({ x: 0, y: 0, add: false });
       g.fillStyle(arena.fallbackColor, 1);
       g.fillRect(0, 0, 640, 360);

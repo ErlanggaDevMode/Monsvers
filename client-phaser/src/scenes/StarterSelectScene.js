@@ -2,12 +2,10 @@ import Phaser from 'phaser';
 import { MONSTERS, STARTER_IDS, createMonsterInstance } from '../data/monsters.js';
 import { INTRO_DIALOGUE } from '../data/campaign.js';
 import { getMonsterTextureKey } from '../art/pixelSprites.js';
-import { ELEMENT_META } from '../ui/BattleHud.js';
 import { DialogueBox } from '../ui/DialogueBox.js';
 import { gameState } from '../state/gameState.js';
 import { audioManager } from '../audio/audioManager.js';
-
-const FONT = 'monospace';
+import { FONTS, ELEMENT_STYLE, drawRpgPanel, createRpgButton } from '../ui/UiTheme.js';
 
 export class StarterSelectScene extends Phaser.Scene {
   constructor() {
@@ -70,43 +68,38 @@ export class StarterSelectScene extends Phaser.Scene {
       this.add.rectangle(cx, height / 2, width, height, 0x090e1a).setDepth(0);
     }
 
-    this.add.rectangle(cx, height / 2, width, height, 0x070c17, 0.82).setDepth(1);
+    this.add.rectangle(cx, height / 2, width, height, 0x060b16, 0.82).setDepth(1);
   }
 
   _buildHeader(width, cx) {
     const g = this.add.graphics().setDepth(10);
-    g.fillStyle(0x0b1222, 0.96);
+    g.fillStyle(0x070c18, 0.96);
     g.fillRect(0, 0, width, 44);
-    g.fillStyle(0x263554, 1);
+    g.fillStyle(0x3b527a, 1);
     g.fillRect(0, 42, width, 2);
 
     // Back button
-    const backBg = this.add
-      .rectangle(38, 22, 56, 24, 0x1e293b)
-      .setStrokeStyle(1, 0x475569)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(11);
-
-    this.add
-      .text(38, 22, 'BACK', {
-        fontFamily: FONT,
-        fontSize: '10px',
-        fontStyle: 'bold',
-        color: '#e2e8f0',
-      })
-      .setOrigin(0.5)
-      .setDepth(12);
-
-    backBg.on('pointerdown', () => {
-      if (this.inputLocked) return;
-      audioManager.playSfx('click');
-      this.scene.start('TitleScene');
+    createRpgButton(this, 42, 21, 64, 24, {
+      label: 'BACK',
+      fill: 0x1e293b,
+      hover: 0x334155,
+      border: 0x64748b,
+      lip: 0x04070f,
+      textColor: '#e2e8f0',
+      fontSize: '8px',
+      fontFamily: FONTS.display,
+      depth: 11,
+      onClick: () => {
+        if (this.inputLocked) return;
+        audioManager.playSfx('click');
+        this.scene.start('TitleScene');
+      },
     });
 
     this.add
       .text(cx, 15, 'PILIH STARTER MONSVER', {
-        fontFamily: FONT,
-        fontSize: '14px',
+        fontFamily: FONTS.display,
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#f8fafc',
       })
@@ -115,75 +108,79 @@ export class StarterSelectScene extends Phaser.Scene {
 
     this.add
       .text(cx, 32, 'Lab Prof. Orin • Desa Solara', {
-        fontFamily: FONT,
+        fontFamily: FONTS.ui,
         fontSize: '10px',
+        fontStyle: 'bold',
         color: '#38bdf8',
       })
       .setOrigin(0.5)
       .setDepth(11);
 
     // Audio toggle top-right
-    const audioBg = this.add
-      .rectangle(width - 48, 22, 72, 24, 0x162440)
-      .setStrokeStyle(1, 0x38bdf8)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(11);
-    const audioTxt = this.add
-      .text(width - 48, 22, 'SFX ON', {
-        fontFamily: FONT,
-        fontSize: '9px',
-        fontStyle: 'bold',
-        color: '#7dd3fc',
-      })
-      .setOrigin(0.5)
-      .setDepth(12);
-
     const syncAudio = () => {
       const muted = audioManager.isMuted();
-      audioBg.setFillStyle(muted ? 0x291522 : 0x162440);
-      audioBg.setStrokeStyle(1, muted ? 0xef4444 : 0x38bdf8);
-      audioTxt.setText(muted ? 'MUTED' : 'SFX ON');
-      audioTxt.setColor(muted ? '#fca5a5' : '#7dd3fc');
+      this.audioBtn.setStyle(muted ? 0x291522 : 0x162440, muted ? 0xef4444 : 0x38bdf8, muted ? '#fca5a5' : '#7dd3fc');
+      this.audioBtn.setLabel(muted ? 'MUTED' : 'SFX ON');
     };
-    audioBg.on('pointerdown', () => {
-      audioManager.unlock();
-      audioManager.toggleMute();
-      syncAudio();
-      if (!audioManager.isMuted()) audioManager.playSfx('click');
+    this.audioBtn = createRpgButton(this, width - 48, 21, 74, 24, {
+      label: 'SFX ON',
+      fill: 0x162440,
+      hover: 0x1e3358,
+      border: 0x38bdf8,
+      lip: 0x04070f,
+      textColor: '#7dd3fc',
+      fontSize: '8px',
+      fontFamily: FONTS.display,
+      depth: 11,
+      onClick: () => {
+        audioManager.unlock();
+        audioManager.toggleMute();
+        syncAudio();
+        if (!audioManager.isMuted()) audioManager.playSfx('click');
+      },
     });
     syncAudio();
   }
 
   _buildStarterCards() {
-    // 3 crisp side-by-side starter cards (x: 112, 320, 528, w: 186, h: 214)
+    // 3 crisp beveled side-by-side starter cards (x: 112, 320, 528, w: 188, h: 224)
     const cardCenters = [112, 320, 528];
-    const cardW = 186;
-    const cardH = 214;
-    const cy = 166;
+    const cardW = 188;
+    const cardH = 224;
+    const cy = 168;
     const top = cy - cardH / 2;
 
     STARTER_IDS.slice(0, 3).forEach((id, idx) => {
       const def = MONSTERS[id];
       if (!def) return;
       const sample = createMonsterInstance(id, 5);
-      const meta = ELEMENT_META[def.element] ?? ELEMENT_META[0];
+      const meta = ELEMENT_STYLE[def.element] ?? ELEMENT_STYLE[0];
       const cx = cardCenters[idx] ?? 320;
       const left = cx - cardW / 2;
 
+      drawRpgPanel(this, left, top, cardW, cardH, {
+        fill: 0x0c1426,
+        alpha: 0.96,
+        border: 0x2a3d61,
+        outer: 0x04070f,
+        depth: 4,
+        rivets: true,
+      });
+
       const bg = this.add
-        .rectangle(cx, cy, cardW, cardH, 0x111a2e)
-        .setStrokeStyle(2, 0x334155)
+        .rectangle(cx, cy, cardW - 4, cardH - 4, 0x0c1426, 0.92)
+        .setStrokeStyle(2, 0x2a3d61)
         .setInteractive({ useHandCursor: true })
         .setDepth(5);
 
-      const stripe = this.add.rectangle(cx, top + 3, cardW - 4, 5, meta.color).setDepth(6);
+      const stripe = this.add.rectangle(cx, top + 4, cardW - 6, 4, meta.color).setDepth(6);
 
       // Selected badge (top-left)
-      const selBg = this.add.rectangle(left + 36, top + 18, 60, 15, meta.color).setDepth(8).setVisible(false);
+      const selBg = this.add.rectangle(left + 38, top + 19, 64, 15, meta.color).setDepth(8).setVisible(false);
       const selTxt = this.add
-        .text(left + 36, top + 18, 'TERPILIH', {
-          fontFamily: FONT,
-          fontSize: '8px',
+        .text(left + 38, top + 19, 'TERPILIH', {
+          fontFamily: FONTS.display,
+          fontSize: '7px',
           fontStyle: 'bold',
           color: '#070b14',
         })
@@ -191,34 +188,40 @@ export class StarterSelectScene extends Phaser.Scene {
         .setDepth(9)
         .setVisible(false);
 
-      // Element pill (top-right)
-      this.add.rectangle(left + cardW - 32, top + 18, 52, 15, meta.bg).setStrokeStyle(1, meta.color).setDepth(7);
+      // Element pill with optional 12x12 icon (top-right)
+      const hasIcon = meta.iconKey && this.textures.exists(meta.iconKey);
+      const pillX = left + cardW - 36;
+      this.add.rectangle(pillX, top + 19, 60, 15, meta.bg).setStrokeStyle(1, meta.color).setDepth(7);
+      if (hasIcon) {
+        this.add.image(pillX - 20, top + 19, meta.iconKey).setDisplaySize(11, 11).setDepth(8);
+      }
       this.add
-        .text(left + cardW - 32, top + 18, meta.label, {
-          fontFamily: FONT,
-          fontSize: '8px',
+        .text(hasIcon ? pillX + 6 : pillX, top + 19, meta.label, {
+          fontFamily: FONTS.display,
+          fontSize: '7px',
           fontStyle: 'bold',
           color: meta.hex,
         })
         .setOrigin(0.5)
         .setDepth(8);
 
-      // Sprite pedestal centered in upper half
-      const spriteY = top + 64;
-      this.add.ellipse(cx, spriteY + 30, 62, 12, 0x020617, 0.55).setDepth(6);
+      // Illuminated pedestal for 64x64 HD starter sprite
+      const spriteY = top + 66;
+      this.add.ellipse(cx, spriteY + 30, 68, 14, 0x020617, 0.65).setDepth(6);
+      this.add.ellipse(cx, spriteY + 29, 60, 12, meta.color, 0.2).setStrokeStyle(1, meta.color, 0.65).setDepth(6);
       this.add.circle(cx, spriteY + 2, 28, meta.color, 0.14).setDepth(6);
 
       const texKey = getMonsterTextureKey(id, 0);
       const sprite = this.add
         .image(cx, spriteY, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(1.22)
+        .setScale(1.16)
         .setDepth(7);
 
       // Name & Title
       this.add
         .text(cx, top + 104, def.name, {
-          fontFamily: FONT,
-          fontSize: '14px',
+          fontFamily: FONTS.display,
+          fontSize: '12px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
@@ -226,21 +229,22 @@ export class StarterSelectScene extends Phaser.Scene {
         .setDepth(7);
 
       this.add
-        .text(cx, top + 121, def.title ?? '', {
-          fontFamily: FONT,
-          fontSize: '9px',
+        .text(cx, top + 122, def.title ?? '', {
+          fontFamily: FONTS.ui,
+          fontSize: '10px',
+          fontStyle: 'bold',
           color: '#94a3b8',
         })
         .setOrigin(0.5, 0)
         .setDepth(7);
 
       // Compact stats bar (HP / ATK / DEF / SPD at Lv.5)
-      const statBoxY = top + 146;
-      this.add.rectangle(cx, statBoxY, cardW - 14, 22, 0x090e1a).setStrokeStyle(1, 0x1e293b).setDepth(6);
+      const statBoxY = top + 148;
+      this.add.rectangle(cx, statBoxY, cardW - 16, 22, 0x09111f).setStrokeStyle(1, 0x263554).setDepth(6);
       this.add
         .text(cx, statBoxY, `HP ${sample.maxHp}  ATK ${sample.attack}  DEF ${sample.defense}  SPD ${sample.speed}`, {
-          fontFamily: FONT,
-          fontSize: '8px',
+          fontFamily: FONTS.ui,
+          fontSize: '9px',
           fontStyle: 'bold',
           color: '#e2e8f0',
         })
@@ -249,12 +253,12 @@ export class StarterSelectScene extends Phaser.Scene {
 
       // Short Indonesian lore bio
       this.add
-        .text(cx, top + 164, def.bio ?? '', {
-          fontFamily: FONT,
+        .text(cx, top + 166, def.bio ?? '', {
+          fontFamily: FONTS.ui,
           fontSize: '9px',
           color: '#cbd5e1',
           align: 'center',
-          lineSpacing: 2,
+          lineSpacing: 3,
           wordWrap: { width: cardW - 18 },
         })
         .setOrigin(0.5, 0)
@@ -272,48 +276,41 @@ export class StarterSelectScene extends Phaser.Scene {
   }
 
   _buildConfirmButton(cx) {
-    this.confirmBg = this.add
-      .rectangle(cx, 326, 340, 42, 0x10b981)
-      .setStrokeStyle(2, 0xf8fafc)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(10);
-
-    this.confirmTxt = this.add
-      .text(cx, 326, 'PILIH PYROFANG & MULAI!', {
-        fontFamily: FONT,
-        fontSize: '13px',
-        fontStyle: 'bold',
-        color: '#070b14',
-      })
-      .setOrigin(0.5)
-      .setDepth(11);
-
-    this.confirmBg.on('pointerdown', () => {
-      if (this.inputLocked) return;
-      audioManager.playSfx('click');
-      this.confirmBg.setScale(0.97);
-      this.confirmTxt.setScale(0.97);
-      gameState.resetNewGame(this.selectedId, this.playerName);
-      this.time.delayedCall(90, () => {
-        this.scene.start('WorldMapScene', { chapter: 1 });
-      });
+    this.confirmBtn = createRpgButton(this, cx, 326, 356, 40, {
+      label: 'PILIH PYROFANG & MULAI!',
+      fill: 0x10b981,
+      hover: 0x34d399,
+      border: 0xf8fafc,
+      lip: 0x04070f,
+      textColor: '#070b14',
+      fontSize: '11px',
+      fontFamily: FONTS.display,
+      depth: 10,
+      onClick: () => {
+        if (this.inputLocked) return;
+        audioManager.playSfx('click');
+        gameState.resetNewGame(this.selectedId, this.playerName);
+        this.time.delayedCall(90, () => {
+          this.scene.start('WorldMapScene', { chapter: 1 });
+        });
+      },
     });
   }
 
   _refreshSelection() {
     this.cardRefs.forEach((ref) => {
       const selected = ref.id === this.selectedId;
-      ref.bg.setFillStyle(selected ? 0x1b2b48 : 0x10182b);
-      ref.bg.setStrokeStyle(selected ? 3 : 2, selected ? ref.meta.color : 0x263554);
+      ref.bg.setFillStyle(selected ? 0x162442 : 0x0c1426, 0.94);
+      ref.bg.setStrokeStyle(selected ? 3 : 2, selected ? ref.meta.color : 0x2a3d61);
       ref.stripe.setAlpha(selected ? 1 : 0.45);
       ref.selBg.setVisible(selected);
       ref.selTxt.setVisible(selected);
-      ref.sprite.setScale(selected ? 1.35 : 1.18);
+      ref.sprite.setScale(selected ? 1.28 : 1.12);
     });
 
     const selectedDef = MONSTERS[this.selectedId];
-    const meta = ELEMENT_META[selectedDef?.element] ?? ELEMENT_META[1];
-    this.confirmBg.setFillStyle(meta.color);
-    this.confirmTxt.setText(`PILIH ${(selectedDef?.name ?? 'STARTER').toUpperCase()} & MULAI!`);
+    const meta = ELEMENT_STYLE[selectedDef?.element] ?? ELEMENT_STYLE[1];
+    this.confirmBtn.setStyle(meta.color, 0xf8fafc, '#070b14');
+    this.confirmBtn.setLabel(`PILIH ${(selectedDef?.name ?? 'STARTER').toUpperCase()} & MULAI!`);
   }
 }
