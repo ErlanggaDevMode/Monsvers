@@ -41,11 +41,11 @@ export class BattleScene extends Phaser.Scene {
       if (Array.isArray(data?.party) && data.party.length > 0) {
         this.party = data.party;
         this.activePartyIndex = data.activePartyIndex ?? 0;
-        this.bag = data.bag ?? { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+        this.bag = data.bag ?? { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3, hyper_orb: 1 };
       } else {
         this.party = STARTER_IDS.map((id) => createMonsterInstance(id, 5));
         this.activePartyIndex = 0;
-        this.bag = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+        this.bag = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3, hyper_orb: 1 };
       }
 
       const allIds = Object.keys(MONSTERS);
@@ -57,6 +57,11 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.idleFrame = 0;
+    this.mcSprite = null;
+    this.mcTexPrefix = null;
+    this.mcPos = { x: 52, y: 196 };
+    this.enemyTrainerSprite = null;
+    this.enemyTrainerTexPrefix = null;
     // Landscape 640x360 arena positions (y: 32..234)
     this.playerPos = { x: 158, y: 184 };
     this.enemyPos = { x: 484, y: 112 };
@@ -76,8 +81,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   async create() {
+    gameState.markSeen?.(this.enemy.id);
+
     this._buildArenaBackdrop();
     this._buildMonsterSprites();
+    this._buildStandingCharacters();
 
     this.hud = new BattleHud(this, {
       onUseSkill: (skill) => this.handlePlayerAttack(skill),
@@ -245,12 +253,82 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  _buildStandingCharacters() {
+    // Left flank: MC standing sprite (x: 52, y: 196, scale 1.05, depth 11)
+    if (this.textures.exists('char_mc_0')) {
+      this.add.ellipse(this.mcPos.x, this.mcPos.y + 30, 38, 9, 0x020617, 0.48).setDepth(8);
+      this.mcSprite = this.add.image(this.mcPos.x, this.mcPos.y, 'char_mc_0').setScale(1.05).setDepth(11);
+      this.mcTexPrefix = 'char_mc';
+    } else if (this.textures.exists('portrait_player')) {
+      this.add.ellipse(this.mcPos.x, this.mcPos.y + 24, 34, 8, 0x020617, 0.42).setDepth(8);
+      this.mcSprite = this.add.image(this.mcPos.x, this.mcPos.y, 'portrait_player').setScale(0.85).setDepth(11);
+      this.mcTexPrefix = null;
+    }
+
+    // Right flank: Rival Kael or Rift Warden in Campaign battles (x: 590, y: 118, scale 1.0, flipped, depth 9)
+    if (this.mode === 'campaign' && this.node) {
+      let prefix = null;
+      let fallbackPortrait = null;
+      if (this.node.type === 'rival') {
+        prefix = 'char_kael';
+        fallbackPortrait = 'portrait_kael';
+      } else if (this.node.type === 'boss' && (this.node.chapter ?? 4) < 4) {
+        prefix = 'char_warden';
+        fallbackPortrait = 'portrait_warden';
+      }
+
+      if (prefix && this.textures.exists(`${prefix}_0`)) {
+        this.add.ellipse(590, 146, 36, 8, 0x020617, 0.42).setDepth(8);
+        this.enemyTrainerSprite = this.add
+          .image(590, 118, `${prefix}_0`)
+          .setScale(1.0)
+          .setFlipX(true)
+          .setDepth(9);
+        this.enemyTrainerTexPrefix = prefix;
+      } else if (fallbackPortrait && this.textures.exists(fallbackPortrait)) {
+        this.add.ellipse(590, 140, 32, 8, 0x020617, 0.38).setDepth(8);
+        this.enemyTrainerSprite = this.add
+          .image(590, 118, fallbackPortrait)
+          .setScale(0.8)
+          .setFlipX(true)
+          .setDepth(9);
+        this.enemyTrainerTexPrefix = null;
+      }
+    }
+  }
+
+  _animateMcCommandHop() {
+    if (!this.mcSprite || !this.mcSprite.active) return;
+    this.tweens.killTweensOf(this.mcSprite);
+    this.mcSprite.setPosition(this.mcPos.x, this.mcPos.y);
+    this.tweens.add({
+      targets: this.mcSprite,
+      x: this.mcPos.x + 10,
+      y: this.mcPos.y - 8,
+      duration: 110,
+      ease: 'Quad.easeOut',
+      yoyo: true,
+      onComplete: () => {
+        if (this.mcSprite?.active) this.mcSprite.setPosition(this.mcPos.x, this.mcPos.y);
+      },
+    });
+  }
+
   _applyMonsterTextures() {
     if (!this.playerSprite || !this.enemySprite) return;
     const pKey = getMonsterTextureKey(this.player.id, this.idleFrame);
     const eKey = getMonsterTextureKey(this.enemy.id, this.idleFrame);
     if (this.textures.exists(pKey)) this.playerSprite.setTexture(pKey);
     if (this.textures.exists(eKey)) this.enemySprite.setTexture(eKey);
+
+    if (this.mcSprite && this.mcTexPrefix) {
+      const mcKey = `${this.mcTexPrefix}_${this.idleFrame}`;
+      if (this.textures.exists(mcKey)) this.mcSprite.setTexture(mcKey);
+    }
+    if (this.enemyTrainerSprite && this.enemyTrainerTexPrefix) {
+      const trKey = `${this.enemyTrainerTexPrefix}_${this.idleFrame}`;
+      if (this.textures.exists(trKey)) this.enemyTrainerSprite.setTexture(trKey);
+    }
   }
 
   _syncHud(animateBars = true) {
@@ -418,11 +496,230 @@ export class BattleScene extends Phaser.Scene {
     await new DialogueBox(this).play(phase2Lines);
   }
 
+  async _playElementalVfx(atkHome, defHome, skill) {
+    const el = skill?.element ?? 0;
+
+    if (el === 1) {
+      // Fire (1): glowing orange-yellow fireball flying from attacker to defender with trailing fire sparks
+      const outer = this.add.circle(atkHome.x, atkHome.y, 13, 0xf97316, 0.9).setDepth(36);
+      const core = this.add.circle(atkHome.x, atkHome.y, 7, 0xfef08a, 1).setDepth(37);
+      const sparkEvent = this.time.addEvent({
+        delay: 40,
+        repeat: 4,
+        callback: () => {
+          const sx = outer.x + Phaser.Math.Between(-6, 6);
+          const sy = outer.y + Phaser.Math.Between(-6, 6);
+          const spark = this.add
+            .rectangle(sx, sy, 5, 5, Math.random() > 0.4 ? 0xfb923c : 0xfde047, 0.95)
+            .setDepth(35);
+          this.tweens.add({
+            targets: spark,
+            y: sy - 10,
+            alpha: 0,
+            scale: 0.3,
+            duration: 180,
+            onComplete: () => spark.destroy(),
+          });
+        },
+      });
+      await new Promise((resolve) => {
+        this.tweens.add({
+          targets: [outer, core],
+          x: defHome.x,
+          y: defHome.y,
+          duration: 240,
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            sparkEvent.remove(false);
+            outer.destroy();
+            core.destroy();
+            resolve();
+          },
+        });
+      });
+      return;
+    }
+
+    if (el === 2) {
+      // Water (2): 3 layered cyan-blue wave bars surging across with splash droplets
+      const colors = [0x0ea5e9, 0x38bdf8, 0xe0f2fe];
+      const angle = Phaser.Math.Angle.Between(atkHome.x, atkHome.y, defHome.x, defHome.y);
+      const waves = colors.map((col, idx) => {
+        const w = this.add
+          .rectangle(atkHome.x, atkHome.y + (idx - 1) * 9, 26 - idx * 3, 6, col, 0.9)
+          .setRotation(angle)
+          .setDepth(36 + idx);
+        return w;
+      });
+      await new Promise((resolve) => {
+        waves.forEach((w, idx) => {
+          this.tweens.add({
+            targets: w,
+            x: defHome.x,
+            y: defHome.y + (idx - 1) * 7,
+            scaleX: 1.3,
+            duration: 230,
+            delay: idx * 24,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+              w.destroy();
+              if (idx === waves.length - 1) {
+                for (let d = 0; d < 6; d++) {
+                  const drop = this.add
+                    .circle(defHome.x, defHome.y, 3, d % 2 === 0 ? 0x38bdf8 : 0xe0f2fe, 0.95)
+                    .setDepth(38);
+                  const da = (Math.PI * 2 * d) / 6;
+                  this.tweens.add({
+                    targets: drop,
+                    x: defHome.x + Math.cos(da) * 26,
+                    y: defHome.y + Math.sin(da) * 22,
+                    alpha: 0,
+                    duration: 180,
+                    onComplete: () => drop.destroy(),
+                  });
+                }
+                resolve();
+              }
+            },
+          });
+        });
+      });
+      return;
+    }
+
+    if (el === 3) {
+      // Nature (3): 3 spinning emerald leaf diamonds flying in a staggered volley
+      await new Promise((resolve) => {
+        const leaves = [0x16a34a, 0x22c55e, 0x86efac];
+        leaves.forEach((col, idx) => {
+          const leaf = this.add
+            .rectangle(atkHome.x, atkHome.y + (idx - 1) * 12, 11, 11, col, 0.95)
+            .setStrokeStyle(1, 0xd9f99d)
+            .setRotation(Math.PI / 4)
+            .setDepth(36 + idx);
+          this.tweens.add({
+            targets: leaf,
+            x: defHome.x,
+            y: defHome.y + (idx - 1) * 6,
+            angle: 360,
+            duration: 200,
+            delay: idx * 42,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+              leaf.destroy();
+              if (idx === leaves.length - 1) resolve();
+            },
+          });
+        });
+      });
+      return;
+    }
+
+    if (el === 4) {
+      // Electric (4): jagged golden lightning bolt from y: 36 down onto defender + white spark flash
+      const bolt = this.add.graphics().setDepth(38);
+      const pts = [
+        { x: defHome.x + Phaser.Math.Between(-8, 8), y: 36 },
+        { x: defHome.x - 14, y: Math.round(36 + (defHome.y - 36) * 0.28) },
+        { x: defHome.x + 12, y: Math.round(36 + (defHome.y - 36) * 0.52) },
+        { x: defHome.x - 10, y: Math.round(36 + (defHome.y - 36) * 0.76) },
+        { x: defHome.x, y: defHome.y },
+      ];
+      bolt.lineStyle(5, 0xfacc15, 0.95);
+      bolt.beginPath();
+      bolt.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) bolt.lineTo(pts[i].x, pts[i].y);
+      bolt.strokePath();
+
+      bolt.lineStyle(2, 0xffffff, 1);
+      bolt.beginPath();
+      bolt.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) bolt.lineTo(pts[i].x, pts[i].y);
+      bolt.strokePath();
+
+      const flash = this.add.circle(defHome.x, defHome.y, 18, 0xffffff, 0.9).setDepth(39);
+      await new Promise((resolve) => {
+        this.tweens.add({
+          targets: [bolt, flash],
+          alpha: 0,
+          duration: 240,
+          ease: 'Cubic.easeOut',
+          onComplete: () => {
+            bolt.destroy();
+            flash.destroy();
+            resolve();
+          },
+        });
+      });
+      return;
+    }
+
+    if (el === 5) {
+      // Shadow (5): dark purple-black eclipse orb pulsing & rushing into defender then imploding with violet rings
+      const orb = this.add
+        .circle(atkHome.x, atkHome.y, 13, 0x1e053a, 0.95)
+        .setStrokeStyle(3, 0xa855f7)
+        .setDepth(37);
+      await new Promise((resolve) => {
+        this.tweens.add({
+          targets: orb,
+          x: defHome.x,
+          y: defHome.y,
+          scale: 1.25,
+          duration: 195,
+          ease: 'Cubic.easeIn',
+          onComplete: () => {
+            orb.destroy();
+            const ring1 = this.add.circle(defHome.x, defHome.y, 26, 0x7e22ce, 0.25).setStrokeStyle(3, 0xc084fc).setDepth(37);
+            const ring2 = this.add.circle(defHome.x, defHome.y, 16, 0x1e053a, 0.45).setStrokeStyle(2, 0xe9d5ff).setDepth(38);
+            this.tweens.add({
+              targets: [ring1, ring2],
+              scale: 0.2,
+              alpha: 0,
+              duration: 120,
+              ease: 'Quad.easeIn',
+              onComplete: () => {
+                ring1.destroy();
+                ring2.destroy();
+                resolve();
+              },
+            });
+          },
+        });
+      });
+      return;
+    }
+
+    // Neutral (0): fast crisp diagonal white slash lines flashing across defender
+    const slash = this.add.graphics().setDepth(38);
+    slash.lineStyle(4, 0xffffff, 1);
+    slash.lineBetween(defHome.x - 26, defHome.y - 22, defHome.x + 26, defHome.y + 22);
+    slash.lineStyle(3, 0xcbd5e1, 0.9);
+    slash.lineBetween(defHome.x + 24, defHome.y - 22, defHome.x - 24, defHome.y + 22);
+    slash.lineBetween(defHome.x - 16, defHome.y - 28, defHome.x + 30, defHome.y + 10);
+    await new Promise((resolve) => {
+      this.tweens.add({
+        targets: slash,
+        alpha: 0,
+        duration: 210,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          slash.destroy();
+          resolve();
+        },
+      });
+    });
+  }
+
   async _executeAttack(attacker, defender, skill, isPlayerAttacking) {
     const atkSprite = isPlayerAttacking ? this.playerSprite : this.enemySprite;
     const defSprite = isPlayerAttacking ? this.enemySprite : this.playerSprite;
     const atkHome = isPlayerAttacking ? this.playerPos : this.enemyPos;
     const defHome = isPlayerAttacking ? this.enemyPos : this.playerPos;
+
+    if (isPlayerAttacking) {
+      this._animateMcCommandHop();
+    }
 
     const report = battleBridge.resolveAttack(attacker, defender, skill, this.nextSeed());
 
@@ -482,6 +779,9 @@ export class BattleScene extends Phaser.Scene {
 
     const isSuper = report.elementMultiplier > 1.05;
     const isResist = report.elementMultiplier < 0.95;
+
+    // Elemental attack projectile & VFX right after lunge, before hit flash
+    await this._playElementalVfx(atkHome, defHome, skill);
 
     // Play contextual impact SFX
     if (report.critical) {
@@ -589,6 +889,7 @@ export class BattleScene extends Phaser.Scene {
     this._setBusy(true);
 
     audioManager.playSfx('guard');
+    this._animateMcCommandHop();
     const guardRes = battleBridge.resolveGuard(this.player);
     this.player.guarding = true;
     this.player.currentSp = guardRes.currentSp;
@@ -626,6 +927,7 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
       audioManager.playSfx('heal');
+      this._animateMcCommandHop();
       this.bag[itemId] -= 1;
       const before = this.player.currentHp;
       this.player.currentHp = Math.min(this.player.maxHp, this.player.currentHp + healAmount);
@@ -645,6 +947,7 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
       audioManager.playSfx('heal');
+      this._animateMcCommandHop();
       this.bag.antidote -= 1;
       this.player.status = 'None';
       this.player.statusTurns = 0;
@@ -654,15 +957,22 @@ export class BattleScene extends Phaser.Scene {
       this._spawnPopup(this.playerPos.x, this.playerPos.y - 26, 'CURED!', '#e9d5ff', '13px');
       this.hud.setLog(`Antidote menyembuhkan status ${this.player.name}!`);
       await this._delay(650);
-    } else if (itemId === 'rift_orb') {
+    } else if (itemId === 'rift_orb' || itemId === 'hyper_orb') {
+      const isHyper = itemId === 'hyper_orb';
+      const orbName = isHyper ? 'Hyper Orb' : 'Rift Orb';
+      const orbColor = isHyper ? 0xf59e0b : 0x38bdf8;
+      const orbStroke = isHyper ? 0xfef08a : 0xf8fafc;
+      const captureMult = isHyper ? 2.0 : 1.25;
+
       audioManager.playSfx('capture_throw');
-      this.bag.rift_orb -= 1;
+      this._animateMcCommandHop();
+      this.bag[itemId] -= 1;
       this._syncHud(true);
-      this.hud.setLog(`Melempar Rift Orb ke ${this.enemy.name}...`);
+      this.hud.setLog(`Melempar ${orbName} ke ${this.enemy.name}...`);
 
       const orb = this.add
-        .circle(this.playerPos.x + 24, this.playerPos.y - 10, 8, 0x38bdf8)
-        .setStrokeStyle(2, 0xf8fafc)
+        .circle(this.playerPos.x + 24, this.playerPos.y - 10, isHyper ? 9 : 8, orbColor)
+        .setStrokeStyle(2, orbStroke)
         .setDepth(35);
       await new Promise((resolve) => {
         this.tweens.add({
@@ -675,8 +985,11 @@ export class BattleScene extends Phaser.Scene {
         });
       });
 
-      this._spawnParticles(this.enemyPos.x, this.enemyPos.y, 0x38bdf8, 18);
-      const cap = battleBridge.calculateCapture(this.enemy, 1.25, this.nextSeed());
+      this._spawnParticles(this.enemyPos.x, this.enemyPos.y, orbColor, isHyper ? 26 : 18);
+      if (isHyper) {
+        this._spawnParticles(this.enemyPos.x, this.enemyPos.y, 0xfef08a, 14);
+      }
+      const cap = battleBridge.calculateCapture(this.enemy, captureMult, this.nextSeed());
       this.enemySprite.setAlpha(0.25);
 
       for (let i = 0; i < Math.max(1, cap.shakes); i++) {
@@ -696,11 +1009,12 @@ export class BattleScene extends Phaser.Scene {
 
       if (cap.captured) {
         audioManager.playSfx('capture_ok');
+        gameState.markCaught?.(this.enemy.id);
         this.enemySprite.setVisible(false);
         this.bossAuraRing?.setVisible(false);
         this.battleEnded = true;
-        this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'CAPTURED!', '#38bdf8', '16px');
-        this.hud.setLog(`Berhasil! ${this.enemy.name} tertangkap oleh Rift Orb!`);
+        this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'CAPTURED!', isHyper ? '#fbbf24' : '#38bdf8', '16px');
+        this.hud.setLog(`Berhasil! ${this.enemy.name} tertangkap oleh ${orbName}!`);
         await this._delay(650);
 
         if (this.mode === 'campaign' && this.node) {
@@ -709,7 +1023,7 @@ export class BattleScene extends Phaser.Scene {
           await this._completeCampaignBattle({
             title: 'CAPTURED!',
             subtitle: `${this.enemy.name} ${destLabel}`,
-            accentColor: 0x38bdf8,
+            accentColor: orbColor,
             extraNote: `Catch Rate: ${Math.round(cap.catchRate * 100)}% • ${this.enemy.name} ${destLabel}`,
           });
         } else {
@@ -737,7 +1051,7 @@ export class BattleScene extends Phaser.Scene {
       audioManager.playSfx('capture_fail');
       this.enemySprite.setAlpha(1);
       this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'BROKE FREE!', '#f97316', '12px');
-      this.hud.setLog(`${this.enemy.name} berhasil melepaskan diri dari Rift Orb!`);
+      this.hud.setLog(`${this.enemy.name} berhasil melepaskan diri dari ${orbName}!`);
       await this._delay(650);
     }
 

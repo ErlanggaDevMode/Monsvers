@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CHAPTERS, CAMPAIGN_NODES, getNodesByChapter } from '../data/campaign.js';
 import { MONSTERS } from '../data/monsters.js';
+import { SHOP_ITEMS } from '../data/items.js';
 import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { battleBridge } from '../bridge/battleBridge.js';
 import { ELEMENT_META } from '../ui/BattleHud.js';
@@ -44,6 +45,13 @@ export class WorldMapScene extends Phaser.Scene {
     this.partyStripContainer = null;
     this.previewContainer = null;
     this.partyModalContainer = null;
+    this.shopModalContainer = null;
+    this.dexModalContainer = null;
+    this.dexAnimTimer = null;
+    this.partyModalTab = 'party';
+    this.selectedDexId = Object.keys(MONSTERS)[0] ?? 'pyrofang';
+    this.selectedPartySwapIdx = 0;
+    this.storagePage = 0;
     this.tabRefs = [];
   }
 
@@ -608,6 +616,19 @@ export class WorldMapScene extends Phaser.Scene {
     }
   }
 
+  _syncTopBarGold() {
+    if (this.goldText) {
+      this.goldText.setText(`${gameState.gold}G`);
+    }
+  }
+
+  _hideAllModals() {
+    this._hidePreviewCard();
+    this._hidePartyModal();
+    this._hideShopModal();
+    this._hideDexModal();
+  }
+
   _buildBottomActionBar() {
     // Bottom Bar (y: 274..360, height 86)
     const g = this.add.graphics().setDepth(20);
@@ -616,54 +637,85 @@ export class WorldMapScene extends Phaser.Scene {
     g.fillStyle(0x263554, 1);
     g.fillRect(0, 274, 640, 2);
 
-    // HEAL CAMP button (right-top)
-    const healBtn = this.add
-      .rectangle(546, 300, 168, 32, 0x065f46)
-      .setStrokeStyle(2, 0x34d399)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(22);
+    // 2x2 thumb-friendly action buttons alongside Party strip (x: 456..632, y: 282..352)
+    const buttons = [
+      {
+        label: 'HEAL',
+        x: 498,
+        y: 298,
+        fill: 0x065f46,
+        hover: 0x047857,
+        stroke: 0x34d399,
+        textColor: '#ecfdf5',
+        onClick: () => {
+          audioManager.playSfx('heal');
+          gameState.healAllParty();
+          this._renderPartyStrip();
+          this._showToast('HEAL CAMP: Tim pulih 100% HP & SP!', '#4ade80');
+        },
+      },
+      {
+        label: 'SHOP',
+        x: 590,
+        y: 298,
+        fill: 0x78350f,
+        hover: 0x92400e,
+        stroke: 0xfbbf24,
+        textColor: '#fef3c7',
+        onClick: () => {
+          audioManager.playSfx('click');
+          this._showShopModal();
+        },
+      },
+      {
+        label: 'DEX',
+        x: 498,
+        y: 336,
+        fill: 0x4c1d95,
+        hover: 0x5b21b6,
+        stroke: 0xc084fc,
+        textColor: '#f3e8ff',
+        onClick: () => {
+          audioManager.playSfx('click');
+          this._showDexModal();
+        },
+      },
+      {
+        label: 'PARTY',
+        x: 590,
+        y: 336,
+        fill: 0x1e293b,
+        hover: 0x334155,
+        stroke: 0x38bdf8,
+        textColor: '#e0f2fe',
+        onClick: () => {
+          audioManager.playSfx('click');
+          this.partyModalTab = 'party';
+          this._showPartyModal();
+        },
+      },
+    ];
 
-    this.add
-      .text(546, 300, 'HEAL CAMP', {
-        fontFamily: FONT,
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: '#ecfdf5',
-      })
-      .setOrigin(0.5)
-      .setDepth(23);
+    buttons.forEach((b) => {
+      const btn = this.add
+        .rectangle(b.x, b.y, 84, 32, b.fill)
+        .setStrokeStyle(2, b.stroke)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(22);
 
-    healBtn.on('pointerover', () => healBtn.setFillStyle(0x047857));
-    healBtn.on('pointerout', () => healBtn.setFillStyle(0x065f46));
-    healBtn.on('pointerdown', () => {
-      audioManager.playSfx('heal');
-      gameState.healAllParty();
-      this._renderPartyStrip();
-      this._showToast('HEAL CAMP: Tim pulih 100% HP & SP!', '#4ade80');
-    });
+      this.add
+        .text(b.x, b.y, b.label, {
+          fontFamily: FONT,
+          fontSize: '11px',
+          fontStyle: 'bold',
+          color: b.textColor,
+        })
+        .setOrigin(0.5)
+        .setDepth(23);
 
-    // PARTY modal button (right-bottom)
-    const partyBtn = this.add
-      .rectangle(546, 337, 168, 30, 0x1e293b)
-      .setStrokeStyle(2, 0x38bdf8)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(22);
-
-    this.add
-      .text(546, 337, 'PARTY', {
-        fontFamily: FONT,
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: '#e0f2fe',
-      })
-      .setOrigin(0.5)
-      .setDepth(23);
-
-    partyBtn.on('pointerover', () => partyBtn.setFillStyle(0x334155));
-    partyBtn.on('pointerout', () => partyBtn.setFillStyle(0x1e293b));
-    partyBtn.on('pointerdown', () => {
-      audioManager.playSfx('click');
-      this._showPartyModal();
+      btn.on('pointerover', () => btn.setFillStyle(b.hover));
+      btn.on('pointerout', () => btn.setFillStyle(b.fill));
+      btn.on('pointerdown', b.onClick);
     });
   }
 
@@ -750,39 +802,45 @@ export class WorldMapScene extends Phaser.Scene {
     }
   }
 
-  _showPartyModal() {
-    this._hidePartyModal();
-    this._hidePreviewCard();
-
-    this.partyModalContainer = this.add.container(0, 0).setDepth(70);
+  _showShopModal() {
+    this._hideAllModals();
+    this.shopModalContainer = this.add.container(0, 0).setDepth(70);
 
     const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.8).setInteractive();
-    dim.on('pointerdown', () => this._hidePartyModal());
+    dim.on('pointerdown', () => this._hideShopModal());
 
-    const panelW = 568;
-    const panelH = 276;
+    const panelW = 540;
+    const panelH = 278;
     const cx = 320;
     const cy = 180;
     const left = cx - panelW / 2;
     const top = cy - panelH / 2;
 
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0x38bdf8).setInteractive();
-    const title = this.add.text(left + 16, top + 14, 'PARTY & LEAD ORDER', {
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0xfbbf24).setInteractive();
+    const title = this.add.text(left + 16, top + 12, 'SOLARA SHOP', {
       fontFamily: FONT,
       fontSize: '13px',
       fontStyle: 'bold',
-      color: '#f8fafc',
+      color: '#fde047',
     });
-
-    const storageCount = gameState.storage?.length ?? 0;
-    const sub = this.add.text(left + 16, top + 32, `Active: ${gameState.party.length}/3   Storage: ${storageCount}`, {
+    const sub = this.add.text(left + 16, top + 28, 'Beli Potion, Antidote & Orb Penangkap', {
       fontFamily: FONT,
-      fontSize: '10px',
+      fontSize: '9px',
       color: '#94a3b8',
     });
 
+    const goldPill = this.add.rectangle(left + panelW - 96, top + 22, 100, 22, 0x1c1917).setStrokeStyle(1, 0xfbbf24);
+    const goldTxt = this.add
+      .text(left + panelW - 96, top + 22, `GOLD: ${gameState.gold}G`, {
+        fontFamily: FONT,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#fbbf24',
+      })
+      .setOrigin(0.5);
+
     const closeBtn = this.add
-      .rectangle(left + panelW - 24, top + 22, 28, 24, 0x1e293b)
+      .rectangle(left + panelW - 24, top + 22, 26, 22, 0x1e293b)
       .setStrokeStyle(1, 0x475569)
       .setInteractive({ useHandCursor: true });
     const closeTxt = this.add
@@ -795,17 +853,457 @@ export class WorldMapScene extends Phaser.Scene {
       .setOrigin(0.5);
     closeBtn.on('pointerdown', () => {
       audioManager.playSfx('click');
+      this._hideShopModal();
+    });
+
+    this.shopModalContainer.add([dim, panel, title, sub, goldPill, goldTxt, closeBtn, closeTxt]);
+
+    const rowW = panelW - 32;
+    const rowH = 39;
+    const gapY = 5;
+    const startY = top + 48;
+
+    SHOP_ITEMS.forEach((item, idx) => {
+      const rx = left + 16;
+      const ry = startY + idx * (rowH + gapY);
+      const owned = gameState.bag?.[item.id] ?? 0;
+      const canAfford = gameState.gold >= item.price;
+
+      const rowBg = this.add
+        .rectangle(rx + rowW / 2, ry + rowH / 2, rowW, rowH, 0x0f172a)
+        .setStrokeStyle(1, 0x263554);
+      const stripe = this.add.rectangle(rx + 4, ry + rowH / 2, 5, rowH - 4, item.color ?? 0x38bdf8);
+
+      const nameTxt = this.add.text(rx + 14, ry + 5, `${item.name}  [${item.shortDesc}]`, {
+        fontFamily: FONT,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      });
+      const descTxt = this.add.text(rx + 14, ry + 21, item.description ?? '', {
+        fontFamily: FONT,
+        fontSize: '8px',
+        color: '#94a3b8',
+      });
+
+      const ownedTxt = this.add
+        .text(rx + rowW - 144, ry + rowH / 2, `TAS: x${owned}`, {
+          fontFamily: FONT,
+          fontSize: '9px',
+          fontStyle: 'bold',
+          color: '#7dd3fc',
+        })
+        .setOrigin(1, 0.5);
+
+      const priceTxt = this.add
+        .text(rx + rowW - 86, ry + rowH / 2, `${item.price}G`, {
+          fontFamily: FONT,
+          fontSize: '11px',
+          fontStyle: 'bold',
+          color: canAfford ? '#fbbf24' : '#ef4444',
+        })
+        .setOrigin(1, 0.5);
+
+      const buyBtn = this.add
+        .rectangle(rx + rowW - 40, ry + rowH / 2, 66, 26, canAfford ? 0x059669 : 0x1e293b)
+        .setStrokeStyle(1, canAfford ? 0x34d399 : 0x475569)
+        .setInteractive({ useHandCursor: true });
+      const buyTxt = this.add
+        .text(rx + rowW - 40, ry + rowH / 2, 'BELI', {
+          fontFamily: FONT,
+          fontSize: '10px',
+          fontStyle: 'bold',
+          color: canAfford ? '#ecfdf5' : '#64748b',
+        })
+        .setOrigin(0.5);
+
+      buyBtn.on('pointerover', () => {
+        if (gameState.gold >= item.price) buyBtn.setFillStyle(0x10b981);
+      });
+      buyBtn.on('pointerout', () => {
+        buyBtn.setFillStyle(gameState.gold >= item.price ? 0x059669 : 0x1e293b);
+      });
+      buyBtn.on('pointerdown', () => {
+        let ok = false;
+        if (typeof gameState.buyItem === 'function') {
+          const res = gameState.buyItem(item.id, 1);
+          ok = typeof res === 'object' && res !== null ? Boolean(res.ok ?? res.success) : Boolean(res);
+        } else if (gameState.gold >= item.price) {
+          gameState.gold -= item.price;
+          gameState.bag[item.id] = (gameState.bag[item.id] ?? 0) + 1;
+          gameState.save?.();
+          ok = true;
+        }
+
+        if (ok) {
+          audioManager.playSfx('heal');
+          this._syncTopBarGold();
+          this._showShopModal();
+          this._showToast(`Membeli ${item.name}! (Sisa ${gameState.gold}G)`, '#4ade80');
+        } else {
+          audioManager.playSfx('miss');
+          this._showToast(`Gold tidak cukup! Butuh ${item.price}G.`, '#f87171');
+        }
+      });
+
+      this.shopModalContainer.add([rowBg, stripe, nameTxt, descTxt, ownedTxt, priceTxt, buyBtn, buyTxt]);
+    });
+  }
+
+  _hideShopModal() {
+    if (this.shopModalContainer) {
+      this.shopModalContainer.destroy(true);
+      this.shopModalContainer = null;
+    }
+  }
+
+  _showDexModal() {
+    this._hideAllModals();
+    this.dexModalContainer = this.add.container(0, 0).setDepth(70);
+
+    const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.82).setInteractive();
+    dim.on('pointerdown', () => this._hideDexModal());
+
+    const panelW = 560;
+    const panelH = 286;
+    const cx = 320;
+    const cy = 180;
+    const left = cx - panelW / 2;
+    const top = cy - panelH / 2;
+
+    const allMons = Object.values(MONSTERS);
+    const ownedFallback = [
+      ...(gameState.party ?? []).map((m) => m.id),
+      ...(gameState.storage ?? []).map((m) => m.id),
+    ];
+    const caughtSet = new Set(Array.isArray(gameState.caughtIds) ? gameState.caughtIds : ownedFallback);
+    const seenSet = new Set([
+      ...(Array.isArray(gameState.seenIds) ? gameState.seenIds : ownedFallback),
+      ...caughtSet,
+    ]);
+    const stats = gameState.getDexStats?.() ?? {
+      seen: seenSet.size,
+      caught: caughtSet.size,
+      total: allMons.length,
+    };
+
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0xc084fc).setInteractive();
+    const headerTxt = this.add.text(
+      left + 16,
+      top + 14,
+      `MONSVERDEX • SEEN ${stats.seen ?? seenSet.size}/${stats.total ?? allMons.length} • CAUGHT ${stats.caught ?? caughtSet.size}/${stats.total ?? allMons.length}`,
+      {
+        fontFamily: FONT,
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#e9d5ff',
+      }
+    );
+
+    const closeBtn = this.add
+      .rectangle(left + panelW - 24, top + 20, 26, 22, 0x1e293b)
+      .setStrokeStyle(1, 0x475569)
+      .setInteractive({ useHandCursor: true });
+    const closeTxt = this.add
+      .text(left + panelW - 24, top + 20, 'X', {
+        fontFamily: FONT,
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      })
+      .setOrigin(0.5);
+    closeBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
+      this._hideDexModal();
+    });
+
+    this.dexModalContainer.add([dim, panel, headerTxt, closeBtn, closeTxt]);
+
+    // Left 4x3 grid of all 12 Monsvers
+    const gridX = left + 14;
+    const gridY = top + 44;
+    const cellW = 62;
+    const cellH = 72;
+    const gapX = 6;
+    const gapY = 6;
+
+    allMons.slice(0, 12).forEach((mon, idx) => {
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      const x = gridX + col * (cellW + gapX);
+      const y = gridY + row * (cellH + gapY);
+      const isCaught = caughtSet.has(mon.id);
+      const isSeen = isCaught || seenSet.has(mon.id);
+      const isSelected = this.selectedDexId === mon.id;
+
+      const cellBg = this.add
+        .rectangle(x + cellW / 2, y + cellH / 2, cellW, cellH, isSelected ? 0x1e2d4a : 0x0f172a)
+        .setStrokeStyle(isSelected ? 2 : 1, isSelected ? 0xfde047 : isCaught ? 0x34d399 : 0x263554)
+        .setInteractive({ useHandCursor: true });
+
+      const texKey = getMonsterTextureKey(mon.id, 0);
+      const sp = this.add
+        .image(x + cellW / 2, y + 28, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .setScale(0.72);
+      if (!isSeen) {
+        sp.setTint(0x090e1a);
+        sp.setAlpha(0.72);
+      } else if (!isCaught) {
+        sp.setAlpha(0.88);
+      }
+
+      const lbl = this.add
+        .text(x + cellW / 2, y + cellH - 11, isSeen ? mon.name.slice(0, 9) : '???', {
+          fontFamily: FONT,
+          fontSize: '8px',
+          fontStyle: isSelected ? 'bold' : 'normal',
+          color: isSeen ? '#f8fafc' : '#64748b',
+        })
+        .setOrigin(0.5);
+
+      cellBg.on('pointerdown', () => {
+        if (this.selectedDexId === mon.id) return;
+        audioManager.playSfx('click');
+        this.selectedDexId = mon.id;
+        this._showDexModal();
+      });
+
+      this.dexModalContainer.add([cellBg, sp, lbl]);
+
+      if (isCaught) {
+        const dot = this.add.circle(x + cellW - 8, y + 8, 4, 0x10b981).setStrokeStyle(1, 0xa7f3d0);
+        this.dexModalContainer.add(dot);
+      }
+    });
+
+    // Right Detail Card (w: 254, h: 228)
+    const detX = left + 292;
+    const detY = top + 44;
+    const detW = 254;
+    const detH = 228;
+    const sel = MONSTERS[this.selectedDexId] ?? allMons[0];
+    const selCaught = caughtSet.has(sel.id);
+    const selSeen = selCaught || seenSet.has(sel.id);
+    const meta = ELEMENT_META[sel.element] ?? ELEMENT_META[0];
+
+    const detBg = this.add
+      .rectangle(detX + detW / 2, detY + detH / 2, detW, detH, 0x0f172a)
+      .setStrokeStyle(2, selSeen ? meta.color : 0x334155);
+    this.dexModalContainer.add(detBg);
+
+    const spriteFrame = this.add
+      .rectangle(detX + 46, detY + 48, 72, 72, 0x090e1a)
+      .setStrokeStyle(1, selSeen ? meta.color : 0x334155);
+    const selTex0 = getMonsterTextureKey(sel.id, 0);
+    const selTex1 = getMonsterTextureKey(sel.id, 1);
+    const detSprite = this.add
+      .image(detX + 46, detY + 48, this.textures.exists(selTex0) ? selTex0 : 'particle_pixel')
+      .setScale(1.18);
+    if (!selSeen) {
+      detSprite.setTint(0x090e1a);
+      detSprite.setAlpha(0.72);
+    } else {
+      let f = 0;
+      this.dexAnimTimer = this.time.addEvent({
+        delay: 440,
+        loop: true,
+        callback: () => {
+          if (!detSprite.active) return;
+          f = f === 0 ? 1 : 0;
+          const k = f === 0 ? selTex0 : selTex1;
+          if (this.textures.exists(k)) detSprite.setTexture(k);
+        },
+      });
+    }
+    this.dexModalContainer.add([spriteFrame, detSprite]);
+
+    const infoX = detX + 90;
+    const statusLabel = selCaught ? 'CAUGHT ★' : selSeen ? 'SEEN' : 'UNSEEN';
+    const statusColor = selCaught ? '#34d399' : selSeen ? '#7dd3fc' : '#64748b';
+
+    const nameTxt = this.add.text(infoX, detY + 12, selSeen ? sel.name : '???', {
+      fontFamily: FONT,
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#f8fafc',
+    });
+    const titleTxt = this.add.text(infoX, detY + 29, selSeen ? (sel.title ?? '') : 'Belum Ditemukan', {
+      fontFamily: FONT,
+      fontSize: '9px',
+      color: '#94a3b8',
+    });
+
+    const elPill = this.add.rectangle(infoX + 26, detY + 51, 52, 15, selSeen ? meta.bg : 0x1e293b);
+    const elTxt = this.add
+      .text(infoX + 26, detY + 51, selSeen ? meta.label : '???', {
+        fontFamily: FONT,
+        fontSize: '8px',
+        fontStyle: 'bold',
+        color: selSeen ? meta.hex : '#64748b',
+      })
+      .setOrigin(0.5);
+
+    const stTxt = this.add.text(infoX + 60, detY + 46, statusLabel, {
+      fontFamily: FONT,
+      fontSize: '9px',
+      fontStyle: 'bold',
+      color: statusColor,
+    });
+
+    const evoStr = !selSeen
+      ? 'Stage ? • ???'
+      : sel.evolvesTo && MONSTERS[sel.evolvesTo]
+        ? `Stage ${sel.stage ?? 1} → ${MONSTERS[sel.evolvesTo].name} (Lv.${sel.evolvesAt})`
+        : `Stage ${sel.stage ?? 1} • Final Form`;
+    const evoTxt = this.add.text(infoX, detY + 67, evoStr, {
+      fontFamily: FONT,
+      fontSize: '8px',
+      color: '#fde047',
+      wordWrap: { width: 156 },
+    });
+
+    const statsBar = this.add.rectangle(detX + detW / 2, detY + 104, detW - 20, 22, 0x16223a).setStrokeStyle(1, 0x263554);
+    const statsText = selSeen
+      ? `HP ${sel.baseHp}  ATK ${sel.baseAttack}  DEF ${sel.baseDefense}  SPD ${sel.baseSpeed}`
+      : 'HP ??   ATK ??   DEF ??   SPD ??';
+    const statsLbl = this.add
+      .text(detX + detW / 2, detY + 104, statsText, {
+        fontFamily: FONT,
+        fontSize: '9px',
+        fontStyle: 'bold',
+        color: selSeen ? '#e2e8f0' : '#64748b',
+      })
+      .setOrigin(0.5);
+
+    const bioHeading = this.add.text(detX + 12, detY + 124, 'LORE / CATATAN RISET:', {
+      fontFamily: FONT,
+      fontSize: '8px',
+      fontStyle: 'bold',
+      color: '#c084fc',
+    });
+    const bioTxt = this.add.text(
+      detX + 12,
+      detY + 138,
+      selSeen
+        ? (sel.bio ?? 'Data ekosistem belum lengkap.')
+        : 'Temui Monsver ini di pertarungan Campaign untuk membuka data & catatan risetnya.',
+      {
+        fontFamily: FONT,
+        fontSize: '9px',
+        color: '#cbd5e1',
+        lineSpacing: 3,
+        wordWrap: { width: detW - 24 },
+      }
+    );
+
+    this.dexModalContainer.add([nameTxt, titleTxt, elPill, elTxt, stTxt, evoTxt, statsBar, statsLbl, bioHeading, bioTxt]);
+  }
+
+  _hideDexModal() {
+    if (this.dexAnimTimer) {
+      this.dexAnimTimer.remove(false);
+      this.dexAnimTimer = null;
+    }
+    if (this.dexModalContainer) {
+      this.dexModalContainer.destroy(true);
+      this.dexModalContainer = null;
+    }
+  }
+
+  _showPartyModal() {
+    this._hideAllModals();
+
+    this.partyModalContainer = this.add.container(0, 0).setDepth(70);
+
+    const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.8).setInteractive();
+    dim.on('pointerdown', () => this._hidePartyModal());
+
+    const panelW = 568;
+    const panelH = 284;
+    const cx = 320;
+    const cy = 180;
+    const left = cx - panelW / 2;
+    const top = cy - panelH / 2;
+
+    const storageList = gameState.storage ?? [];
+    const isPartyTab = this.partyModalTab !== 'storage';
+
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0x38bdf8).setInteractive();
+
+    // Toggle tabs: ACTIVE PARTY (x/3) | RIFT STORAGE (n)
+    const tab1Bg = this.add
+      .rectangle(left + 112, top + 24, 192, 26, isPartyTab ? 0x1d4ed8 : 0x0f172a)
+      .setStrokeStyle(2, isPartyTab ? 0x60a5fa : 0x334155)
+      .setInteractive({ useHandCursor: true });
+    const tab1Txt = this.add
+      .text(left + 112, top + 24, `ACTIVE PARTY (${gameState.party.length}/3)`, {
+        fontFamily: FONT,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: isPartyTab ? '#ffffff' : '#94a3b8',
+      })
+      .setOrigin(0.5);
+    tab1Bg.on('pointerdown', () => {
+      if (this.partyModalTab === 'party') return;
+      audioManager.playSfx('click');
+      this.partyModalTab = 'party';
+      this._showPartyModal();
+    });
+
+    const tab2Bg = this.add
+      .rectangle(left + 314, top + 24, 192, 26, !isPartyTab ? 0x6d28d9 : 0x0f172a)
+      .setStrokeStyle(2, !isPartyTab ? 0xc084fc : 0x334155)
+      .setInteractive({ useHandCursor: true });
+    const tab2Txt = this.add
+      .text(left + 314, top + 24, `RIFT STORAGE (${storageList.length})`, {
+        fontFamily: FONT,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: !isPartyTab ? '#ffffff' : '#94a3b8',
+      })
+      .setOrigin(0.5);
+    tab2Bg.on('pointerdown', () => {
+      if (this.partyModalTab === 'storage') return;
+      audioManager.playSfx('click');
+      this.partyModalTab = 'storage';
+      this.storagePage = 0;
+      this._showPartyModal();
+    });
+
+    const closeBtn = this.add
+      .rectangle(left + panelW - 24, top + 24, 28, 24, 0x1e293b)
+      .setStrokeStyle(1, 0x475569)
+      .setInteractive({ useHandCursor: true });
+    const closeTxt = this.add
+      .text(left + panelW - 24, top + 24, 'X', {
+        fontFamily: FONT,
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      })
+      .setOrigin(0.5);
+    closeBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
       this._hidePartyModal();
     });
 
-    this.partyModalContainer.add([dim, panel, title, sub, closeBtn, closeTxt]);
+    this.partyModalContainer.add([dim, panel, tab1Bg, tab1Txt, tab2Bg, tab2Txt, closeBtn, closeTxt]);
 
+    if (isPartyTab) {
+      this._renderPartyModalActiveTab(left, top);
+    } else {
+      this._renderPartyModalStorageTab(left, top, panelW, panelH);
+    }
+  }
+
+  _renderPartyModalActiveTab(left, top) {
     // 3 horizontal Monsver cards side-by-side inside modal
     const cardW = 172;
-    const cardH = 204;
+    const cardH = 212;
     const gapX = 10;
     const startX = left + 16;
-    const cardY = top + 54;
+    const cardY = top + 52;
+    const canSendToStorage = gameState.party.length > 1;
 
     gameState.party.slice(0, 3).forEach((mon, idx) => {
       const cardX = startX + idx * (cardW + gapX);
@@ -873,26 +1371,31 @@ export class WorldMapScene extends Phaser.Scene {
 
       this.partyModalContainer.add([cardBg, img, nameTxt, elTxt, track, fill, hpTxt, statsTxt, xpTxt]);
 
+      const btnY = cardY + 186;
       if (isLead) {
-        const leadBg = this.add.rectangle(cardCx, cardY + 180, 128, 24, 0x065f46).setStrokeStyle(1, 0x34d399);
+        const w = canSendToStorage ? 76 : 128;
+        const bx = canSendToStorage ? cardCx - 38 : cardCx;
+        const leadBg = this.add.rectangle(bx, btnY, w, 24, 0x065f46).setStrokeStyle(1, 0x34d399);
         const leadTxt = this.add
-          .text(cardCx, cardY + 180, 'LEAD ★', {
+          .text(bx, btnY, 'LEAD ★', {
             fontFamily: FONT,
-            fontSize: '10px',
+            fontSize: '9px',
             fontStyle: 'bold',
             color: '#6ee7b7',
           })
           .setOrigin(0.5);
         this.partyModalContainer.add([leadBg, leadTxt]);
       } else {
+        const w = canSendToStorage ? 76 : 128;
+        const bx = canSendToStorage ? cardCx - 38 : cardCx;
         const swapBtn = this.add
-          .rectangle(cardCx, cardY + 180, 128, 26, 0x1d4ed8)
+          .rectangle(bx, btnY, w, 24, 0x1d4ed8)
           .setStrokeStyle(1, 0x60a5fa)
           .setInteractive({ useHandCursor: true });
         const swapTxt = this.add
-          .text(cardCx, cardY + 180, 'SET LEAD', {
+          .text(bx, btnY, 'SET LEAD', {
             fontFamily: FONT,
-            fontSize: '10px',
+            fontSize: '9px',
             fontStyle: 'bold',
             color: '#ffffff',
           })
@@ -907,7 +1410,245 @@ export class WorldMapScene extends Phaser.Scene {
         });
         this.partyModalContainer.add([swapBtn, swapTxt]);
       }
+
+      if (canSendToStorage) {
+        const storeBtn = this.add
+          .rectangle(cardCx + 42, btnY, 68, 24, 0x4c1d95)
+          .setStrokeStyle(1, 0xc084fc)
+          .setInteractive({ useHandCursor: true });
+        const storeTxt = this.add
+          .text(cardCx + 42, btnY, 'SIMPAN', {
+            fontFamily: FONT,
+            fontSize: '9px',
+            fontStyle: 'bold',
+            color: '#f3e8ff',
+          })
+          .setOrigin(0.5);
+
+        storeBtn.on('pointerdown', () => {
+          let ok = false;
+          if (typeof gameState.movePartyToStorage === 'function') {
+            ok = Boolean(gameState.movePartyToStorage(idx));
+          } else if (gameState.party.length > 1 && gameState.party[idx]) {
+            const [moved] = gameState.party.splice(idx, 1);
+            if (!Array.isArray(gameState.storage)) gameState.storage = [];
+            gameState.storage.push(moved);
+            gameState.save?.();
+            ok = true;
+          }
+          if (ok) {
+            audioManager.playSfx('click');
+            this._renderPartyStrip();
+            this._showPartyModal();
+            this._showToast(`${mon.name} dipindahkan ke Rift Storage!`, '#c084fc');
+          }
+        });
+        this.partyModalContainer.add([storeBtn, storeTxt]);
+      }
     });
+  }
+
+  _renderPartyModalStorageTab(left, top, panelW, panelH) {
+    const storageList = gameState.storage ?? [];
+    if (storageList.length === 0) {
+      const emptyTxt = this.add
+        .text(
+          left + panelW / 2,
+          top + panelH / 2 + 10,
+          'Rift Storage masih kosong.\nTangkap Monsver liar dengan Rift Orb atau Hyper Orb!',
+          {
+            fontFamily: FONT,
+            fontSize: '11px',
+            color: '#94a3b8',
+            align: 'center',
+            lineSpacing: 5,
+          }
+        )
+        .setOrigin(0.5);
+      this.partyModalContainer.add(emptyTxt);
+      return;
+    }
+
+    const partyFull = gameState.party.length >= 3;
+    if (this.selectedPartySwapIdx >= gameState.party.length) {
+      this.selectedPartySwapIdx = 0;
+    }
+
+    let gridStartY = top + 52;
+
+    if (partyFull) {
+      // Party swap target selector bar
+      const barY = top + 58;
+      const lbl = this.add.text(left + 16, barY - 6, 'TUKAR DGN:', {
+        fontFamily: FONT,
+        fontSize: '9px',
+        fontStyle: 'bold',
+        color: '#fde047',
+      });
+      this.partyModalContainer.add(lbl);
+
+      gameState.party.slice(0, 3).forEach((pm, pIdx) => {
+        const px = left + 150 + pIdx * 138;
+        const selected = this.selectedPartySwapIdx === pIdx;
+        const pill = this.add
+          .rectangle(px, barY, 130, 22, selected ? 0x1e3a5f : 0x0f172a)
+          .setStrokeStyle(selected ? 2 : 1, selected ? 0xfde047 : 0x334155)
+          .setInteractive({ useHandCursor: true });
+        const pTxt = this.add
+          .text(px, barY, `${pIdx + 1}. ${pm.name.slice(0, 9)} Lv.${pm.level}`, {
+            fontFamily: FONT,
+            fontSize: '8px',
+            fontStyle: 'bold',
+            color: selected ? '#fde047' : '#cbd5e1',
+          })
+          .setOrigin(0.5);
+        pill.on('pointerdown', () => {
+          audioManager.playSfx('click');
+          this.selectedPartySwapIdx = pIdx;
+          this._showPartyModal();
+        });
+        this.partyModalContainer.add([pill, pTxt]);
+      });
+
+      gridStartY = top + 78;
+    }
+
+    const perPage = 6;
+    const totalPages = Math.max(1, Math.ceil(storageList.length / perPage));
+    this.storagePage = Math.max(0, Math.min(this.storagePage, totalPages - 1));
+    const pageStart = this.storagePage * perPage;
+    const pageItems = storageList.slice(pageStart, pageStart + perPage);
+
+    const cardW = 172;
+    const cardH = partyFull ? 86 : 96;
+    const gapX = 10;
+    const gapY = 8;
+    const startX = left + 16;
+
+    pageItems.forEach((mon, localIdx) => {
+      const sIdx = pageStart + localIdx;
+      const col = localIdx % 3;
+      const row = Math.floor(localIdx / 3);
+      const x = startX + col * (cardW + gapX);
+      const y = gridStartY + row * (cardH + gapY);
+      const meta = ELEMENT_META[mon.element] ?? ELEMENT_META[0];
+
+      const bg = this.add
+        .rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x0f172a)
+        .setStrokeStyle(1, meta.color);
+
+      const texKey = getMonsterTextureKey(mon.id, 0);
+      const sp = this.add
+        .image(x + 28, y + 32, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .setScale(0.72);
+
+      const nameTxt = this.add.text(x + 54, y + 10, `${mon.name.slice(0, 10)}`, {
+        fontFamily: FONT,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+      });
+      const subTxt = this.add.text(x + 54, y + 24, `Lv.${mon.level} • ${meta.label}`, {
+        fontFamily: FONT,
+        fontSize: '8px',
+        color: meta.hex,
+      });
+      const statTxt = this.add.text(x + 54, y + 37, `HP ${mon.maxHp}  ATK ${mon.attack}`, {
+        fontFamily: FONT,
+        fontSize: '8px',
+        color: '#94a3b8',
+      });
+
+      const actBtn = this.add
+        .rectangle(x + cardW / 2, y + cardH - 16, cardW - 18, 22, partyFull ? 0xb45309 : 0x059669)
+        .setStrokeStyle(1, partyFull ? 0xfbbf24 : 0x34d399)
+        .setInteractive({ useHandCursor: true });
+      const actTxt = this.add
+        .text(x + cardW / 2, y + cardH - 16, partyFull ? 'TUKAR' : 'MASUK PARTY', {
+          fontFamily: FONT,
+          fontSize: '9px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5);
+
+      actBtn.on('pointerdown', () => {
+        if (!partyFull) {
+          let ok = false;
+          if (typeof gameState.moveStorageToParty === 'function') {
+            ok = Boolean(gameState.moveStorageToParty(sIdx));
+          } else if (gameState.party.length < 3 && gameState.storage?.[sIdx]) {
+            const [moved] = gameState.storage.splice(sIdx, 1);
+            gameState.party.push(moved);
+            gameState.save?.();
+            ok = true;
+          }
+          if (ok) {
+            audioManager.playSfx('heal');
+            this._renderPartyStrip();
+            this._showPartyModal();
+            this._showToast(`${mon.name} bergabung ke Active Party!`, '#4ade80');
+          }
+        } else {
+          const prevName = gameState.party[this.selectedPartySwapIdx]?.name ?? 'Monsver';
+          const ok = gameState.swapWithStorage?.(this.selectedPartySwapIdx, sIdx);
+          if (ok) {
+            audioManager.playSfx('click');
+            this._renderPartyStrip();
+            this._showPartyModal();
+            this._showToast(`${mon.name} ditukar dengan ${prevName}!`, '#fde047');
+          }
+        }
+      });
+
+      this.partyModalContainer.add([bg, sp, nameTxt, subTxt, statTxt, actBtn, actTxt]);
+    });
+
+    if (totalPages > 1) {
+      const py = top + panelH - 14;
+      const prevBtn = this.add
+        .text(left + panelW / 2 - 54, py, '< PREV', {
+          fontFamily: FONT,
+          fontSize: '9px',
+          fontStyle: 'bold',
+          color: this.storagePage > 0 ? '#7dd3fc' : '#475569',
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      const pageTxt = this.add
+        .text(left + panelW / 2, py, `${this.storagePage + 1}/${totalPages}`, {
+          fontFamily: FONT,
+          fontSize: '9px',
+          color: '#cbd5e1',
+        })
+        .setOrigin(0.5);
+      const nextBtn = this.add
+        .text(left + panelW / 2 + 54, py, 'NEXT >', {
+          fontFamily: FONT,
+          fontSize: '9px',
+          fontStyle: 'bold',
+          color: this.storagePage < totalPages - 1 ? '#7dd3fc' : '#475569',
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+
+      prevBtn.on('pointerdown', () => {
+        if (this.storagePage > 0) {
+          audioManager.playSfx('click');
+          this.storagePage -= 1;
+          this._showPartyModal();
+        }
+      });
+      nextBtn.on('pointerdown', () => {
+        if (this.storagePage < totalPages - 1) {
+          audioManager.playSfx('click');
+          this.storagePage += 1;
+          this._showPartyModal();
+        }
+      });
+
+      this.partyModalContainer.add([prevBtn, pageTxt, nextBtn]);
+    }
   }
 
   _hidePartyModal() {

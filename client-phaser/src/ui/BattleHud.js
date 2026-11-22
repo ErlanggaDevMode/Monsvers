@@ -683,51 +683,48 @@ export class BattleHud {
 
   _renderBagGrid() {
     const { bag } = this.state;
-    const items = [
+    const topItems = [
       { id: 'potion', name: 'Potion', desc: '+45 HP', color: 0x22c55e, count: bag.potion ?? 0 },
       { id: 'super_potion', name: 'Super Potion', desc: '+90 HP', color: 0x10b981, count: bag.super_potion ?? 0 },
       { id: 'antidote', name: 'Antidote', desc: 'Cure Status', color: 0xa855f7, count: bag.antidote ?? 0 },
-      { id: 'rift_orb', name: 'Rift Orb', desc: 'Capture', color: 0x38bdf8, count: bag.rift_orb ?? 0 },
+    ];
+    const orbItems = [
+      { id: 'rift_orb', name: 'Rift Orb', desc: '1.25x Catch', color: 0x38bdf8, count: bag.rift_orb ?? 0 },
+      { id: 'hyper_orb', name: 'Hyper Orb', desc: '2.0x Catch', color: 0xf59e0b, count: bag.hyper_orb ?? 0 },
     ];
 
-    const btnW = 178;
-    const btnH = 37;
-    const gapX = 11;
-    const gapY = 8;
     const startX = 262;
-    const startY = 270;
+    const row1Y = 270;
+    const rowH = 38;
+    const row2Y = row1Y + rowH + 6;
 
-    items.forEach((item, idx) => {
-      const col = idx % 2;
-      const row = Math.floor(idx / 2);
-      const x = startX + col * (btnW + gapX);
-      const y = startY + row * (btnH + gapY);
+    const drawCard = (item, x, y, w, h, compact) => {
       const usable = item.count > 0;
 
       const bg = this.scene.add
-        .rectangle(x + btnW / 2, y + btnH / 2, btnW, btnH, usable ? 0x16223a : 0x0f172a)
+        .rectangle(x + w / 2, y + h / 2, w, h, usable ? 0x16223a : 0x0f172a)
         .setStrokeStyle(2, usable ? 0x3b4f78 : 0x1e293b);
 
-      const stripe = this.scene.add.rectangle(x + 4, y + btnH / 2, 5, btnH - 4, item.color);
+      const stripe = this.scene.add.rectangle(x + 4, y + h / 2, 5, h - 4, item.color);
       if (!usable) stripe.setAlpha(0.35);
 
-      const nameTxt = this.scene.add.text(x + 12, y + 5, item.name, {
+      const nameTxt = this.scene.add.text(x + 11, y + 5, item.name, {
         fontFamily: FONT,
-        fontSize: '11px',
+        fontSize: compact ? '10px' : '11px',
         fontStyle: 'bold',
         color: usable ? '#f8fafc' : '#64748b',
       });
 
-      const descTxt = this.scene.add.text(x + 12, y + 21, item.desc, {
+      const descTxt = this.scene.add.text(x + 11, y + 21, item.desc, {
         fontFamily: FONT,
-        fontSize: '9px',
+        fontSize: compact ? '8px' : '9px',
         color: usable ? '#cbd5e1' : '#475569',
       });
 
       const countTxt = this.scene.add
-        .text(x + btnW - 8, y + 26, `x${item.count}`, {
+        .text(x + w - 7, y + 26, `x${item.count}`, {
           fontFamily: FONT,
-          fontSize: '10px',
+          fontSize: compact ? '9px' : '10px',
           fontStyle: 'bold',
           color: usable ? '#fde047' : '#64748b',
         })
@@ -745,6 +742,20 @@ export class BattleHud {
       }
 
       this.deckContainer.add([bg, stripe, nameTxt, descTxt, countTxt]);
+    };
+
+    // Row 1: 3 compact heal/cure cards (3 * 118 + 2 * 7 = 368px)
+    const topW = 118;
+    const topGap = 7;
+    topItems.forEach((item, idx) => {
+      drawCard(item, startX + idx * (topW + topGap), row1Y, topW, rowH, true);
+    });
+
+    // Row 2: 2 wide capture orb cards (2 * 180 + 8 = 368px)
+    const orbW = 180;
+    const orbGap = 8;
+    orbItems.forEach((item, idx) => {
+      drawCard(item, startX + idx * (orbW + orbGap), row2Y, orbW, rowH, false);
     });
   }
 

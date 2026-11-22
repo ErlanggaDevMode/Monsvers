@@ -384,60 +384,7 @@ function drawAzureArena(ctx) {
     ctx.fillRect(px, py, 2, 2);
   }
 
-  // 7. Enemy Platform (Right-Top: center X=480, Y=175)
-  // Soft shadow
-  ctx.fillStyle = '#020b12';
-  ctx.beginPath();
-  ctx.ellipse(480, 184, 70, 17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Basalt foundation
-  ctx.fillStyle = '#0f172a';
-  ctx.beginPath();
-  ctx.ellipse(480, 178, 65, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Marine stone disk
-  ctx.fillStyle = '#0369a1';
-  ctx.beginPath();
-  ctx.ellipse(480, 174, 61, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Turquoise coral reef battle surface
-  ctx.fillStyle = '#0284c7';
-  ctx.beginPath();
-  ctx.ellipse(480, 170, 57, 11, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#38bdf8';
-  ctx.beginPath();
-  ctx.ellipse(480, 168, 51, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 8. Player Platform (Left-Bottom: center X=170, Y=288)
-  // Soft shadow
-  ctx.fillStyle = '#020b12';
-  ctx.beginPath();
-  ctx.ellipse(170, 302, 86, 21, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Ancient tide-temple masonry base
-  ctx.fillStyle = '#0f172a';
-  ctx.beginPath();
-  ctx.ellipse(170, 294, 80, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#0369a1';
-  ctx.beginPath();
-  ctx.ellipse(170, 289, 76, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Azure marble battle disk
-  ctx.fillStyle = '#0284c7';
-  ctx.beginPath();
-  ctx.ellipse(170, 284, 72, 12, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#38bdf8';
-  ctx.beginPath();
-  ctx.ellipse(170, 282, 65, 9, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Center tidal glyph
-  ctx.fillStyle = '#e0f2fe';
-  ctx.fillRect(167, 280, 6, 2);
-  ctx.fillRect(169, 278, 2, 6);
+  // Open coastal shelf arena ground (Dynamic battle platforms drawn cleanly by BattleScene)
 }
 
 /**
@@ -568,60 +515,7 @@ function drawIgnisArena(ctx) {
     ctx.fillRect(ex, ey, 2, 2);
   }
 
-  // 7. Enemy Platform (Right-Top: center X=480, Y=175)
-  // Soft shadow
-  ctx.fillStyle = '#080203';
-  ctx.beginPath();
-  ctx.ellipse(480, 184, 70, 17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Basalt foundation
-  ctx.fillStyle = '#1c1917';
-  ctx.beginPath();
-  ctx.ellipse(480, 178, 65, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Magma rim
-  ctx.fillStyle = '#991b1b';
-  ctx.beginPath();
-  ctx.ellipse(480, 174, 61, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Obsidian volcanic battle plate
-  ctx.fillStyle = '#292524';
-  ctx.beginPath();
-  ctx.ellipse(480, 170, 57, 11, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#ea580c';
-  ctx.beginPath();
-  ctx.ellipse(480, 168, 51, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 8. Player Platform (Left-Bottom: center X=170, Y=288)
-  // Soft shadow
-  ctx.fillStyle = '#060102';
-  ctx.beginPath();
-  ctx.ellipse(170, 302, 86, 21, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Hexagonal basalt base
-  ctx.fillStyle = '#1c1917';
-  ctx.beginPath();
-  ctx.ellipse(170, 294, 80, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#991b1b';
-  ctx.beginPath();
-  ctx.ellipse(170, 289, 76, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Obsidian volcanic battle plate
-  ctx.fillStyle = '#292524';
-  ctx.beginPath();
-  ctx.ellipse(170, 284, 72, 12, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#ea580c';
-  ctx.beginPath();
-  ctx.ellipse(170, 282, 65, 9, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Center incandescent flame glyph
-  ctx.fillStyle = '#fef08a';
-  ctx.fillRect(167, 280, 6, 2);
-  ctx.fillRect(169, 278, 2, 6);
+  // Open caldera basalt arena floor (Dynamic battle platforms drawn cleanly by BattleScene)
 }
 
 /**
@@ -743,60 +637,7 @@ function drawEclipseArena(ctx) {
     ctx.fillRect(mx, my, 2, 2);
   }
 
-  // 6. Enemy Platform (Right-Top: center X=480, Y=175)
-  // Soft void shadow
-  ctx.fillStyle = '#020005';
-  ctx.beginPath();
-  ctx.ellipse(480, 184, 70, 17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Obsidian ruin foundation
-  ctx.fillStyle = '#1e0836';
-  ctx.beginPath();
-  ctx.ellipse(480, 178, 65, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Arcane rift rim
-  ctx.fillStyle = '#6b21a8';
-  ctx.beginPath();
-  ctx.ellipse(480, 174, 61, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Void crystal battle surface
-  ctx.fillStyle = '#3b0764';
-  ctx.beginPath();
-  ctx.ellipse(480, 170, 57, 11, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#a855f7';
-  ctx.beginPath();
-  ctx.ellipse(480, 168, 51, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 7. Player Platform (Left-Bottom: center X=170, Y=288)
-  // Soft void shadow
-  ctx.fillStyle = '#020005';
-  ctx.beginPath();
-  ctx.ellipse(170, 302, 86, 21, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Ancient sanctuary dias masonry
-  ctx.fillStyle = '#1e0836';
-  ctx.beginPath();
-  ctx.ellipse(170, 294, 80, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#6b21a8';
-  ctx.beginPath();
-  ctx.ellipse(170, 289, 76, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Astral purple battle plate
-  ctx.fillStyle = '#4c1d95';
-  ctx.beginPath();
-  ctx.ellipse(170, 284, 72, 12, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#a855f7';
-  ctx.beginPath();
-  ctx.ellipse(170, 282, 65, 9, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Center celestial seal glyph
-  ctx.fillStyle = '#f3e8ff';
-  ctx.fillRect(167, 280, 6, 2);
-  ctx.fillRect(169, 278, 2, 6);
+  // Open cosmic abyss arena floor (Dynamic battle platforms drawn cleanly by BattleScene)
 }
 
 // ============================================================================
@@ -859,103 +700,335 @@ export function registerStoryTextures(scene) {
   }
 
   // --------------------------------------------------------------------------
-  // 1b. Full-Body Standing Pixel-Art MC Character (20x24 scaled 3x -> 60x72, 2 frames)
+  // 1b. Full-Body Standing Pixel-Art Characters (20x22 scaled 3x -> 60x66, 2 frames each)
+  // - char_mc_0 & char_mc_1: Player MC (Headband, emerald tunic, blue scarf)
+  // - char_orin_0 & char_orin_1: Prof. Orin (Silver hair, glasses, lab coat, cyan scarf, datapad)
+  // - char_kael_0 & char_kael_1: Rival Kael (Spiky fiery hair, visor, crimson-trimmed jacket, cape)
+  // - char_warden_0 & char_warden_1: Rift Warden (Crimson cowl, porcelain mask, glowing eyes, obsidian cloak)
   // --------------------------------------------------------------------------
-  const mcPalette = {
-    '.': null,
-    'O': '#050811', // Dark outline
-    'H': '#78350f', // Chestnut hair
-    'h': '#b45309', // Hair highlight
-    'D': '#16a34a', // Green headband
-    'd': '#facc15', // Gold headband emblem
-    'S': '#fde68a', // Skin
-    's': '#f59e0b', // Skin shade
-    'E': '#0f172a', // Eye pupil
-    'e': '#ffffff', // Eye shine
-    'i': '#38bdf8', // Blue iris
-    'T': '#047857', // Emerald Tamer tunic
-    't': '#34d399', // Tunic trim/highlight
-    'C': '#1e3a8a', // Adventurer cape/scarf
-    'c': '#38bdf8', // Scarf highlight
-    'G': '#f59e0b', // Belt buckle / Rift Orb pouch
-    'P': '#1e293b', // Trousers
-    'B': '#451a03', // Boots
-    'b': '#92400e', // Boot highlight
-  };
-  const mcFrames = [
-    [
-      '......OOOOOOOO......',
-      '.....OHHhHHhHHO.....',
-      '....OHHhhHHhhHHO....',
-      '....ODDDDddDDDDO....',
-      '....OHSSSSSSSSHO....',
-      '....OHSEiSSiESHO....',
-      '....OHSEeSSeESHO....',
-      '.....OSSSssSSSO.....',
-      '....OOcCCCCCCcOO....',
-      '...OCCtTTTTTTtCCO...',
-      '...OCOTTTTTTTTOCO...',
-      '...O.OSTTTTTTSO.O...',
-      '.....OSTTGTTTSO.....',
-      '.....OOTTTTTTOO.....',
-      '......OPPPPPPO......',
-      '......OPP..PPO......',
-      '......OPP..PPO......',
-      '......OPP..PPO......',
-      '.....OBbO..ObBO.....',
-      '.....OBBO..OBBO.....',
-      '.....OOOO..OOOO.....',
-      '....................',
-    ],
-    [
-      '....................',
-      '......OOOOOOOO......',
-      '.....OHHhHHhHHO.....',
-      '....OHHhhHHhhHHO....',
-      '....ODDDDddDDDDO....',
-      '....OHSSSSSSSSHO....',
-      '....OHSEiSSiESHO....',
-      '....OHSEeSSeESHO....',
-      '.....OSSSssSSSO.....',
-      '...OOccCCCCCCccOO...',
-      '..OCCTtTTTTTTtTCCO..',
-      '...O.OSTTTTTTSO.O...',
-      '.....OSTTGTTTSO.....',
-      '.....OOTTTTTTOO.....',
-      '......OPPPPPPO......',
-      '......OPP..PPO......',
-      '......OPP..PPO......',
-      '......OPP..PPO......',
-      '.....OBbO..ObBO.....',
-      '.....OBBO..OBBO.....',
-      '.....OOOO..OOOO.....',
-      '....................',
-    ],
+  const standingCharacters = [
+    {
+      prefix: 'char_mc',
+      palette: {
+        '.': null,
+        'O': '#050811', // Dark outline
+        'H': '#78350f', // Chestnut hair
+        'h': '#b45309', // Hair highlight
+        'D': '#16a34a', // Green headband
+        'd': '#facc15', // Gold headband emblem
+        'S': '#fde68a', // Skin
+        's': '#f59e0b', // Skin shade
+        'E': '#0f172a', // Eye pupil
+        'e': '#ffffff', // Eye shine
+        'i': '#38bdf8', // Blue iris
+        'T': '#047857', // Emerald Tamer tunic
+        't': '#34d399', // Tunic trim/highlight
+        'C': '#1e3a8a', // Adventurer cape/scarf
+        'c': '#38bdf8', // Scarf highlight
+        'G': '#f59e0b', // Belt buckle / Rift Orb pouch
+        'P': '#1e293b', // Trousers
+        'B': '#451a03', // Boots
+        'b': '#92400e', // Boot highlight
+      },
+      frames: [
+        [
+          '......OOOOOOOO......',
+          '.....OHHhHHhHHO.....',
+          '....OHHhhHHhhHHO....',
+          '....ODDDDddDDDDO....',
+          '....OHSSSSSSSSHO....',
+          '....OHSEiSSiESHO....',
+          '....OHSEeSSeESHO....',
+          '.....OSSSssSSSO.....',
+          '....OOcCCCCCCcOO....',
+          '...OCCtTTTTTTtCCO...',
+          '...OCOTTTTTTTTOCO...',
+          '...O.OSTTTTTTSO.O...',
+          '.....OSTTGTTTSO.....',
+          '.....OOTTTTTTOO.....',
+          '......OPPPPPPO......',
+          '......OPP..PPO......',
+          '......OPP..PPO......',
+          '......OPP..PPO......',
+          '.....OBbO..ObBO.....',
+          '.....OBBO..OBBO.....',
+          '.....OOOO..OOOO.....',
+          '....................',
+        ],
+        [
+          '....................',
+          '......OOOOOOOO......',
+          '.....OHHhHHhHHO.....',
+          '....OHHhhHHhhHHO....',
+          '....ODDDDddDDDDO....',
+          '....OHSSSSSSSSHO....',
+          '....OHSEiSSiESHO....',
+          '....OHSEeSSeESHO....',
+          '.....OSSSssSSSO.....',
+          '...OOccCCCCCCccOO...',
+          '..OCCTtTTTTTTtTCCO..',
+          '...O.OSTTTTTTSO.O...',
+          '.....OSTTGTTTSO.....',
+          '.....OOTTTTTTOO.....',
+          '......OPPPPPPO......',
+          '......OPP..PPO......',
+          '......OPP..PPO......',
+          '......OPP..PPO......',
+          '.....OBbO..ObBO.....',
+          '.....OBBO..OBBO.....',
+          '.....OOOO..OOOO.....',
+          '....................',
+        ],
+      ],
+    },
+    {
+      prefix: 'char_orin',
+      palette: {
+        '.': null,
+        'O': '#050811', // Dark outline
+        'H': '#94a3b8', // Silver scholar hair
+        'h': '#f1f5f9', // Hair highlight
+        'G': '#cbd5e1', // Glasses frame
+        'g': '#ffffff', // Glasses glare
+        'S': '#fde68a', // Skin tone
+        's': '#f59e0b', // Skin shade
+        'E': '#0284c7', // Eye iris
+        'C': '#06b6d4', // Cyan scarf
+        'c': '#67e8f9', // Scarf highlight
+        'L': '#f8fafc', // White lab coat
+        'l': '#cbd5e1', // Lab coat shade
+        'T': '#1e293b', // Scholar tunic
+        't': '#334155', // Tunic fold
+        'D': '#0891b2', // Datapad body
+        'd': '#38bdf8', // Datapad glowing screen
+        'W': '#ffffff', // Datapad screen glow
+        'w': '#bae6fd', // Datapad screen cyan glow
+        'P': '#334155', // Lab trousers
+        'B': '#1e293b', // Shoes
+        'b': '#475569', // Shoe highlight
+      },
+      frames: [
+        [
+          '......OOOOOOOO......',
+          '.....OHHhHHhHHO.....',
+          '....OHHhhHHhhHHO....',
+          '....OHHHHHHHHHHO....',
+          '....OHSSGGSSGGHO....',
+          '....OHSGgESGgEHO....',
+          '....OHSSGGSSGGHO....',
+          '.....OSSSssSSSO.....',
+          '....OOcCCCCCCcOO....',
+          '...OLLcCCCCCCLLlO...',
+          '..OLllLTtTTtTLllLO..',
+          '..OLLlLTtTTtTLddDO..',
+          '..OLSLlTllTTLSWdDO..',
+          '..OLLLlLLLLlLLllLO..',
+          '..OLLLlLL..LLlLLLO..',
+          '...OLLlPP..PPlLLO...',
+          '...OLllPP..PPlLLO...',
+          '....O.OPP..PPO.O....',
+          '.....OBbO..ObBO.....',
+          '.....OBBO..OBBO.....',
+          '.....OOOO..OOOO.....',
+          '....................',
+        ],
+        [
+          '....................',
+          '......OOOOOOOO......',
+          '.....OHHhHHhHHO.....',
+          '....OHHhhHHhhHHO....',
+          '....OHHHHHHHHHHO....',
+          '....OHSSGGSSGGHO....',
+          '....OHSGgESGgEHO....',
+          '....OHSSGGSSGGHO....',
+          '.....OSSSssSSSO.....',
+          '...OOccCCCCCCccOO...',
+          '..OLLccCCCCCCccLLlO.',
+          '..OLllLTtTTtTLllLO..',
+          '..OLLlLTtTTtTLdDDO..',
+          '..OLSLlTllTTLSwWDO..',
+          '..OLLLlLLLLlLLllLO..',
+          '..OLLLlLL..LLlLLLO..',
+          '...OLLlPP..PPlLLO...',
+          '....O.OPP..PPO.O....',
+          '.....OBbO..ObBO.....',
+          '.....OBBO..OBBO.....',
+          '.....OOOO..OOOO.....',
+          '....................',
+        ],
+      ],
+    },
+    {
+      prefix: 'char_kael',
+      palette: {
+        '.': null,
+        'O': '#050201', // Dark outline
+        'H': '#ea580c', // Fiery orange hair
+        'h': '#f97316', // Flame hair highlight
+        'Y': '#fde047', // Hair tip flame yellow
+        'V': '#f59e0b', // Golden tech visor body
+        'v': '#fef08a', // Visor shine flare
+        'S': '#fed7aa', // Skin
+        's': '#fb923c', // Skin shadow
+        'M': '#991b1b', // Smirk mouth
+        'J': '#18181b', // Dark jacket
+        'j': '#27272a', // Jacket highlight
+        'R': '#dc2626', // Crimson jacket trim
+        'r': '#ef4444', // Bright crimson trim
+        'K': '#b91c1c', // Rival cape trim
+        'G': '#f59e0b', // Golden belt buckle / badge
+        'P': '#09090b', // Trousers
+        'B': '#3f3f46', // Combat boots
+        'b': '#71717a', // Boot metal clasp
+      },
+      frames: [
+        [
+          '...YY....HH...YY....',
+          '..YhhH..HHHH.HhhY...',
+          '.OHHhhHHHHHHHHhhHO..',
+          '.OHHHHHHHHHHHHHHHO..',
+          '..OHHHSSSSSSSSHHHO..',
+          '..OHSSVvvVVvvVSSHO..',
+          '..OHSSVVVVVVVVSSHO..',
+          '...OSSSSMSSMSSSO....',
+          '...OORRrRRrRRrROO...',
+          '..OKJJJJRRRRJJJJO...',
+          '.OKKJJjjJJJJjjJJO...',
+          '.OK.OSJJJJJJJSO.O...',
+          '.....OSJJGJJSPO.....',
+          '.....OJJRRRRJJO.....',
+          '.....OKOPPPPPO......',
+          '....OK..OPP.PPO.....',
+          '........OPP.PPO.....',
+          '........OPP.PPO.....',
+          '.......OBbO.ObBO....',
+          '.......OBBO.OBBO....',
+          '.......OOOO.OOOO....',
+          '....................',
+        ],
+        [
+          '..YY.....HH....YY...',
+          '.YhhH...HHHH..HhhY..',
+          '.OHHhhHHHHHHHHhhHO..',
+          '.OHHHHHHHHHHHHHHHO..',
+          '..OHHHSSSSSSSSHHHO..',
+          '..OHSSVvvVVvvVSSHO..',
+          '..OHSSVVVVVVVVSSHO..',
+          '...OSSSSMSSMSSSO....',
+          '..OORRrRRrRRrROO....',
+          '.OKKJJJJRRRRJJJJO...',
+          'OKKKJJjjJJJJjjJJO...',
+          '.OK.OSJJJJJJJSO.O...',
+          '..K..OSJJGJJSPO.....',
+          '.....OJJRRRRJJO.....',
+          '....OKOPPPPPO.......',
+          '...OK...OPP.PPO.....',
+          '........OPP.PPO.....',
+          '........OPP.PPO.....',
+          '.......OBbO.ObBO....',
+          '.......OBBO.OBBO....',
+          '.......OOOO.OOOO....',
+          '....................',
+        ],
+      ],
+    },
+    {
+      prefix: 'char_warden',
+      palette: {
+        '.': null,
+        'O': '#060103', // Dark outline
+        'C': '#7f1d1d', // Crimson hood/cowl
+        'c': '#991b1b', // Bright hood highlight
+        'D': '#450a0a', // Deep hood shadow
+        'M': '#f8fafc', // Porcelain mask base
+        'm': '#cbd5e1', // Porcelain mask shadow
+        'E': '#dc2626', // Crimson eye slit
+        'e': '#fca5a5', // Eye flare spark
+        'P': '#18181b', // Obsidian pauldrons
+        'p': '#27272a', // Armor highlight
+        'R': '#b91c1c', // Pauldron rift rune
+        'K': '#09090b', // Dark abyss cloak
+        'k': '#18181b', // Cloak fold
+        'V': '#581c87', // Void rift mist
+      },
+      frames: [
+        [
+          '......OOOOOOOO......',
+          '.....OCccccCCDO.....',
+          '....OCccccccCDDO....',
+          '...OCCDccccCDDDCO...',
+          '...OCDDMMMMMMDDCO...',
+          '..OCDDMMmMMmMMMDCO..',
+          '..OCDDMmEeMMmEeMDCO.',
+          '..OCDDDMMMMMMDDCO...',
+          '..OODDDCCCCCDDDOO...',
+          '.OPpRPPDDDDDDPPRpPO.',
+          'OPppRPPKKKKKKPPRppPO',
+          'OPPppPOKKKKKKOPPppPO',
+          '.OOOO.OKKKKKKO.OOOO.',
+          '......OKKkKKkKO.....',
+          '.....OKKKkkKKKKO....',
+          '....OKKKKkkKKKKKO...',
+          '....OKKkKKKKkKKKO...',
+          '...OKKKkkKKkkKKKKO..',
+          '...OKKkKKKKKKkKKKO..',
+          '..OKKKkKVVVkKKKKKO..',
+          '..OOOOOVVVVVOOOOOO..',
+          '....................',
+        ],
+        [
+          '....................',
+          '......OOOOOOOO......',
+          '.....OCccccCCDO.....',
+          '....OCccccccCDDO....',
+          '...OCCDccccCDDDCO...',
+          '..OCDDMMMMMMDDCO....',
+          '..OCDDMmEeMMmEeMDCO.',
+          '..OCDDDMMMMMMDDCO...',
+          '..OODDDCCCCCDDDOO...',
+          '.OPpRPPDDDDDDPPRpPO.',
+          'OPppRPPKKKKKKPPRppPO',
+          'OPPppPOKKKkKkOPPppPO',
+          '.OOOO.OKKKkKkO.OOOO.',
+          '......OKkkKKkKO.....',
+          '.....OKKkkKKKKKO....',
+          '....OKKKkkKKKKKKO...',
+          '...OKKKkKKKKkKKKKO..',
+          '...OKKkkKKkkKKKKKO..',
+          '..OKKKkKKKKKKkKKKKO.',
+          '..OKKKkVVVVVVkKKKKO.',
+          '..OOOOOVVVVVVVOOOOO.',
+          '....................',
+        ],
+      ],
+    },
   ];
 
-  mcFrames.forEach((grid, frameIdx) => {
-    const key = `char_mc_${frameIdx}`;
-    if (scene.textures.exists(key)) return;
-    const mcScale = 3;
-    const w = 20 * mcScale;
-    const h = 22 * mcScale;
-    const tex = createOrGetCanvasTexture(scene, key, w, h);
-    if (tex && tex.context) {
-      const ctx = tex.context;
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, w, h);
-      for (let y = 0; y < grid.length; y++) {
-        const row = grid[y];
-        for (let x = 0; x < row.length; x++) {
-          const col = mcPalette[row[x]];
-          if (col) {
-            ctx.fillStyle = col;
-            ctx.fillRect(x * mcScale, y * mcScale, mcScale, mcScale);
+  standingCharacters.forEach((charDef) => {
+    charDef.frames.forEach((grid, frameIdx) => {
+      const key = `${charDef.prefix}_${frameIdx}`;
+      if (scene.textures.exists(key)) return;
+      const charScale = 3;
+      const w = 20 * charScale;
+      const h = 22 * charScale;
+      const tex = createOrGetCanvasTexture(scene, key, w, h);
+      if (tex && tex.context) {
+        const ctx = tex.context;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, w, h);
+        for (let y = 0; y < grid.length; y++) {
+          const row = grid[y];
+          for (let x = 0; x < row.length; x++) {
+            const col = charDef.palette[row[x]];
+            if (col) {
+              ctx.fillStyle = col;
+              ctx.fillRect(x * charScale, y * charScale, charScale, charScale);
+            }
           }
         }
+        if (typeof tex.refresh === 'function') tex.refresh();
       }
-      if (typeof tex.refresh === 'function') tex.refresh();
-    }
+    });
   });
 
   // --------------------------------------------------------------------------

@@ -864,59 +864,7 @@ export function registerAllPixelTextures(scene) {
         ctx.fillRect(fx, fy, 2, 2);
       }
 
-      // Enemy Platform (Right-Top: center X=480, Y=175)
-      // Soft shadow
-      ctx.fillStyle = '#05070e';
-      ctx.beginPath();
-      ctx.ellipse(480, 184, 66, 16, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Stone base layers
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.ellipse(480, 178, 62, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#334155';
-      ctx.beginPath();
-      ctx.ellipse(480, 174, 58, 12, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Top moss surface & rim highlight
-      ctx.fillStyle = '#15803d';
-      ctx.beginPath();
-      ctx.ellipse(480, 170, 54, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#22c55e';
-      ctx.beginPath();
-      ctx.ellipse(480, 168, 50, 7, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Player Platform (Left-Bottom: center X=169, Y=290)
-      // Soft shadow
-      ctx.fillStyle = '#03050a';
-      ctx.beginPath();
-      ctx.ellipse(169, 302, 82, 20, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Ancient stone masonry base layers
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.ellipse(169, 294, 78, 17, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#334155';
-      ctx.beginPath();
-      ctx.ellipse(169, 289, 74, 15, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Lush grassy moss battle surface
-      ctx.fillStyle = '#16a34a';
-      ctx.beginPath();
-      ctx.ellipse(169, 284, 70, 12, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#4ade80';
-      ctx.beginPath();
-      ctx.ellipse(169, 282, 64, 8, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Runic glyph highlight in center of player platform
-      ctx.fillStyle = '#bef264';
-      ctx.fillRect(166, 280, 6, 2);
-      ctx.fillRect(168, 278, 2, 6);
+      // Open arena clearing ground (Dynamic battle platforms drawn cleanly by BattleScene)
 
       if (typeof tex.refresh === 'function') tex.refresh();
     }

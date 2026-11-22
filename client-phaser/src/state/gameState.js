@@ -1,11 +1,21 @@
 import { MONSTERS, createMonsterInstance } from '../data/monsters.js';
 import { CAMPAIGN_NODES } from '../data/campaign.js';
+import { getItem } from '../data/items.js';
 
 export const SAVE_KEY = 'monsvers_save_v1';
 const SAVE_VERSION = 1;
 const MAX_PARTY_SIZE = 3;
-const DEFAULT_BAG = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
-const NEW_GAME_BAG = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 4 };
+const DEFAULT_BAG = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3, hyper_orb: 0 };
+const NEW_GAME_BAG = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 4, hyper_orb: 1 };
+
+function isValidMonsterId(id) {
+  return typeof id === 'string' && Object.prototype.hasOwnProperty.call(MONSTERS, id);
+}
+
+function sanitizeMonsterIdList(rawIds) {
+  if (!Array.isArray(rawIds)) return [];
+  return [...new Set(rawIds.filter((id) => isValidMonsterId(id)))];
+}
 
 function getStorage() {
   try {
@@ -96,6 +106,8 @@ class GameState {
     this.gold = 100;
     this.completedNodeIds = [];
     this.currentNodeId = getDefaultNodeId();
+    this.seenIds = ['pyrofang'];
+    this.caughtIds = ['pyrofang'];
   }
 
   setPlayerName(name) {
@@ -118,6 +130,8 @@ class GameState {
       completedNodeIds: this.completedNodeIds,
       currentNodeId: this.currentNodeId,
       starterId: this.starterId,
+      seenIds: this.seenIds,
+      caughtIds: this.caughtIds,
     };
   }
 
@@ -159,6 +173,15 @@ class GameState {
         : getDefaultNodeId();
 
     this.starterId = starterId;
+
+    const ownedIds = [...this.party, ...this.storage]
+      .map((m) => m?.id)
+      .filter((id) => isValidMonsterId(id));
+    const caughtSet = new Set([...sanitizeMonsterIdList(parsed.caughtIds), ...ownedIds]);
+    const seenSet = new Set([...sanitizeMonsterIdList(parsed.seenIds), ...caughtSet]);
+    this.caughtIds = [...caughtSet];
+    this.seenIds = [...seenSet];
+
     return true;
   }
 
@@ -218,7 +241,42 @@ class GameState {
     this.gold = 100;
     this.completedNodeIds = [];
     this.currentNodeId = getDefaultNodeId();
+    this.seenIds = [validStarter];
+    this.caughtIds = [validStarter];
     this.save();
+  }
+
+  markSeen(monsterId) {
+    if (!isValidMonsterId(monsterId)) return false;
+    if (this.seenIds.includes(monsterId)) return false;
+    this.seenIds.push(monsterId);
+    this.save();
+    return true;
+  }
+
+  markCaught(monsterId) {
+    if (!isValidMonsterId(monsterId)) return false;
+    let changed = false;
+    if (!this.seenIds.includes(monsterId)) {
+      this.seenIds.push(monsterId);
+      changed = true;
+    }
+    if (!this.caughtIds.includes(monsterId)) {
+      this.caughtIds.push(monsterId);
+      changed = true;
+    }
+    if (changed) {
+      this.save();
+    }
+    return changed;
+  }
+
+  getDexStats() {
+    return {
+      seen: this.seenIds.length,
+      caught: this.caughtIds.length,
+      total: Object.keys(MONSTERS).length,
+    };
   }
 
   exportSaveJson() {
@@ -268,6 +326,8 @@ class GameState {
     clean.statusTurns = 0;
     clean.guarding = false;
 
+    this.markCaught(clean.id);
+
     if (this.party.length < MAX_PARTY_SIZE) {
       this.party.push(clean);
       this.save();
@@ -311,6 +371,60 @@ class GameState {
     this.storage[storageIdx] = fromParty;
     this.save();
     return true;
+  }
+
+  moveStorageToParty(storageIdx) {
+    if (
+      !Number.isInteger(storageIdx) ||
+      storageIdx < 0 ||
+      storageIdx >= this.storage.length ||
+      this.party.length >= MAX_PARTY_SIZE
+    ) {
+      return false;
+    }
+    const [mon] = this.storage.splice(storageIdx, 1);
+    this.party.push(mon);
+    this.save();
+    return true;
+  }
+
+  movePartyToStorage(partyIdx) {
+    if (
+      !Number.isInteger(partyIdx) ||
+      partyIdx < 0 ||
+      partyIdx >= this.party.length ||
+      this.party.length <= 1
+    ) {
+      return false;
+    }
+    const [mon] = this.party.splice(partyIdx, 1);
+    this.storage.push(mon);
+    this.save();
+    return true;
+  }
+
+  buyItem(itemId, qty = 1) {
+    const item = getItem(itemId);
+    if (!item) {
+      return { ok: false, reason: 'invalid_item' };
+    }
+    if (!Number.isInteger(qty) || qty < 1) {
+      return { ok: false, reason: 'invalid_quantity' };
+    }
+    const cost = item.price * qty;
+    if (this.gold < cost) {
+      return { ok: false, reason: 'insufficient_gold' };
+    }
+    this.gold -= cost;
+    this.bag[item.id] = (this.bag[item.id] ?? 0) + qty;
+    this.save();
+    return {
+      ok: true,
+      item,
+      cost,
+      gold: this.gold,
+      count: this.bag[item.id],
+    };
   }
 
   consumeItem(itemId) {
@@ -411,6 +525,7 @@ class GameState {
     monster.statusTurns = 0;
     monster.guarding = false;
 
+    this.markCaught(evo.id);
     this.save();
     return { oldName, newName: evo.name, newId: evo.id };
   }

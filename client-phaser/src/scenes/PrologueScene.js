@@ -21,6 +21,7 @@ export class PrologueScene extends Phaser.Scene {
     this.stageObjects = [];
     this.nameBtnRefs = [];
     this.mcSprite = null;
+    this.orinSprite = null;
     this.mcFrame = 0;
   }
 
@@ -70,15 +71,20 @@ export class PrologueScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(30);
 
-    // Animate standing MC sprite idle frames
+    // Animate standing MC & Orin sprites idle frames
     this.time.addEvent({
       delay: 460,
       loop: true,
       callback: () => {
-        if (!this.mcSprite || !this.mcSprite.active) return;
         this.mcFrame = this.mcFrame === 0 ? 1 : 0;
-        const key = `char_mc_${this.mcFrame}`;
-        if (this.textures.exists(key)) this.mcSprite.setTexture(key);
+        if (this.mcSprite && this.mcSprite.active) {
+          const key = `char_mc_${this.mcFrame}`;
+          if (this.textures.exists(key)) this.mcSprite.setTexture(key);
+        }
+        if (this.orinSprite && this.orinSprite.active) {
+          const oKey = `char_orin_${this.mcFrame}`;
+          if (this.textures.exists(oKey)) this.orinSprite.setTexture(oKey);
+        }
       },
     });
 
@@ -320,7 +326,12 @@ export class PrologueScene extends Phaser.Scene {
       items.push(pFrame, pImg);
     }
 
-    if (this.textures.exists('portrait_orin')) {
+    if (this.textures.exists('char_orin_0')) {
+      const oFrame = this.add.rectangle(cx + 140, cy, 76, 86, 0x0f172a).setStrokeStyle(2, 0x38bdf8).setDepth(11);
+      const oImg = this.add.image(cx + 140, cy, 'char_orin_0').setScale(1.18).setFlipX(true).setDepth(12);
+      this.orinSprite = oImg;
+      items.push(oFrame, oImg);
+    } else if (this.textures.exists('portrait_orin')) {
       const oFrame = this.add.rectangle(cx + 140, cy, 76, 76, 0x0f172a).setStrokeStyle(2, 0x38bdf8).setDepth(11);
       const oImg = this.add.image(cx + 140, cy, 'portrait_orin').setScale(1.45).setDepth(12);
       items.push(oFrame, oImg);

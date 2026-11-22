@@ -40,6 +40,7 @@ export class BattleOutcomeScene extends Phaser.Scene {
     this.quickBag = data?.quickBag ?? null;
     this.idleFrame = 0;
     this.showcaseSprites = [];
+    this.mcSprite = null;
   }
 
   async create() {
@@ -63,8 +64,8 @@ export class BattleOutcomeScene extends Phaser.Scene {
       this._buildVictoryScreen(width, height, playerName);
     }
 
-    // 2-frame idle animation for displayed Monsver sprites
-    if (this.showcaseSprites.length > 0) {
+    // 2-frame idle animation for displayed Monsver & MC sprites
+    if (this.showcaseSprites.length > 0 || this.mcSprite) {
       this.time.addEvent({
         delay: 420,
         loop: true,
@@ -74,6 +75,10 @@ export class BattleOutcomeScene extends Phaser.Scene {
             const key = getMonsterTextureKey(id, this.idleFrame);
             if (this.textures.exists(key)) sprite.setTexture(key);
           });
+          if (this.mcSprite && this.mcSprite.active) {
+            const mcKey = `char_mc_${this.idleFrame}`;
+            if (this.textures.exists(mcKey)) this.mcSprite.setTexture(mcKey);
+          }
         },
       });
     }
@@ -164,15 +169,18 @@ export class BattleOutcomeScene extends Phaser.Scene {
 
     const lead = this.playerSnapshot;
     if (lead && this.textures.exists(getMonsterTextureKey(lead.id, 0))) {
-      const glow = this.add.circle(172, 166, 50, accent, 0.16).setDepth(9);
+      const glow = this.add.circle(188, 166, 46, accent, 0.16).setDepth(9);
       this.tweens.add({ targets: glow, scale: 1.15, yoyo: true, repeat: -1, duration: 1100 });
 
-      const sp = this.add.image(172, 164, getMonsterTextureKey(lead.id, 0)).setScale(1.85).setDepth(11);
+      const sp = this.add.image(188, 164, getMonsterTextureKey(lead.id, 0)).setScale(1.75).setDepth(11);
       this.tweens.add({ targets: sp, y: 154, yoyo: true, repeat: -1, duration: 460, ease: 'Sine.easeOut' });
       this.showcaseSprites.push({ id: lead.id, sprite: sp });
     }
 
-    if (this.textures.exists('portrait_player')) {
+    if (this.textures.exists('char_mc_0')) {
+      this.add.ellipse(86, 204, 46, 12, 0x020617, 0.5).setDepth(10);
+      this.mcSprite = this.add.image(86, 166, 'char_mc_0').setScale(1.22).setDepth(12);
+    } else if (this.textures.exists('portrait_player')) {
       this.add.rectangle(76, 126, 52, 52, 0x0f172a).setStrokeStyle(2, 0x4ade80).setDepth(11);
       this.add.image(76, 126, 'portrait_player').setScale(0.98).setDepth(12);
     }
@@ -372,8 +380,11 @@ export class BattleOutcomeScene extends Phaser.Scene {
     // Champion Party Hall of Fame showcase
     this.add.rectangle(width / 2, 166, 576, 174, 0x0b1222, 0.88).setStrokeStyle(2, 0xfacc15).setDepth(8);
 
-    // MC Champion Portrait on left
-    if (this.textures.exists('portrait_player')) {
+    // MC Champion Standing Sprite on left
+    if (this.textures.exists('char_mc_0')) {
+      this.add.rectangle(104, 150, 78, 92, 0x0f172a).setStrokeStyle(2, 0xfde047).setDepth(10);
+      this.mcSprite = this.add.image(104, 150, 'char_mc_0').setScale(1.22).setDepth(11);
+    } else if (this.textures.exists('portrait_player')) {
       this.add.rectangle(104, 154, 78, 78, 0x0f172a).setStrokeStyle(2, 0xfde047).setDepth(10);
       this.add.image(104, 154, 'portrait_player').setScale(1.45).setDepth(11);
     }
@@ -458,7 +469,10 @@ export class BattleOutcomeScene extends Phaser.Scene {
     this.add.rectangle(156, 174, 236, 184, 0x130d1d, 0.92).setStrokeStyle(2, 0xef4444).setDepth(8);
 
     const lead = this.playerSnapshot;
-    if (this.textures.exists('portrait_player')) {
+    if (this.textures.exists('char_mc_0')) {
+      this.add.ellipse(92, 188, 44, 11, 0x020617, 0.5).setDepth(10);
+      this.mcSprite = this.add.image(92, 152, 'char_mc_0').setScale(1.18).setTint(0xcbd5e1).setDepth(11);
+    } else if (this.textures.exists('portrait_player')) {
       this.add.rectangle(86, 146, 62, 62, 0x0f172a).setStrokeStyle(2, 0xef4444).setDepth(10);
       this.add.image(86, 146, 'portrait_player').setScale(1.18).setTint(0xcbd5e1).setDepth(11);
     }
