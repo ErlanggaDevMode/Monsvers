@@ -14,8 +14,10 @@ export class StarterSelectScene extends Phaser.Scene {
     super({ key: 'StarterSelectScene' });
   }
 
-  init() {
+  init(data) {
     this.selectedId = STARTER_IDS[0] ?? 'pyrofang';
+    this.playerName = data?.playerName || gameState.playerName || 'Arion';
+    this.fromPrologue = Boolean(data?.fromPrologue);
     this.inputLocked = true;
     this.idleFrame = 0;
     this.cardRefs = [];
@@ -45,7 +47,15 @@ export class StarterSelectScene extends Phaser.Scene {
     });
 
     // Play intro story dialogue before unlocking starter selection
-    if (Array.isArray(INTRO_DIALOGUE) && INTRO_DIALOGUE.length > 0) {
+    if (this.fromPrologue) {
+      await new DialogueBox(this).play([
+        {
+          speaker: 'Prof. Orin',
+          portrait: 'portrait_orin',
+          text: `Baiklah, ${this.playerName}! Di hadapanmu ada 3 Monsver pilihan: Pyrofang, Aquafin, dan Verdantix. Pilih partner pertamamu!`,
+        },
+      ]);
+    } else if (Array.isArray(INTRO_DIALOGUE) && INTRO_DIALOGUE.length > 0) {
       await new DialogueBox(this).play(INTRO_DIALOGUE);
     }
     this.inputLocked = false;
@@ -283,7 +293,7 @@ export class StarterSelectScene extends Phaser.Scene {
       audioManager.playSfx('click');
       this.confirmBg.setScale(0.97);
       this.confirmTxt.setScale(0.97);
-      gameState.resetNewGame(this.selectedId);
+      gameState.resetNewGame(this.selectedId, this.playerName);
       this.time.delayedCall(90, () => {
         this.scene.start('WorldMapScene', { chapter: 1 });
       });

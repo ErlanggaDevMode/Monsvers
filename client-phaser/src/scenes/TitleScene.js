@@ -156,6 +156,27 @@ export class TitleScene extends Phaser.Scene {
     });
 
     sync();
+
+    // Small PROLOG replay button next to audio toggle
+    const pBg = this.add
+      .rectangle(bx - 82, by, 68, 24, 0x1e293b)
+      .setStrokeStyle(1, 0x475569)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(12);
+    this.add
+      .text(bx - 82, by, 'PROLOG', {
+        fontFamily: FONT,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#cbd5e1',
+      })
+      .setOrigin(0.5)
+      .setDepth(13);
+    pBg.on('pointerdown', () => {
+      audioManager.unlock();
+      audioManager.playSfx('click');
+      this.scene.start('PrologueScene', { runtime: this.runtime, replayOnly: true });
+    });
   }
 
   _buildTitleHeader(leftX) {
@@ -270,7 +291,7 @@ export class TitleScene extends Phaser.Scene {
             border: 0x64748b,
             textColor: '#f8fafc',
             onClick: () => {
-              this.scene.start('StarterSelectScene');
+              this.scene.start('PrologueScene', { runtime: this.runtime });
             },
           },
           {
@@ -292,7 +313,7 @@ export class TitleScene extends Phaser.Scene {
             border: 0xa7f3d0,
             textColor: '#052e16',
             onClick: () => {
-              this.scene.start('StarterSelectScene');
+              this.scene.start('PrologueScene', { runtime: this.runtime });
             },
           },
           {

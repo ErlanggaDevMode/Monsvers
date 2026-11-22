@@ -88,6 +88,7 @@ function sanitizeBag(rawBag, baseBag = DEFAULT_BAG) {
 
 class GameState {
   constructor() {
+    this.playerName = 'Arion';
     this.starterId = 'pyrofang';
     this.party = [createMonsterInstance('pyrofang', 5)];
     this.storage = [];
@@ -97,10 +98,19 @@ class GameState {
     this.currentNodeId = getDefaultNodeId();
   }
 
+  setPlayerName(name) {
+    if (typeof name === 'string' && name.trim()) {
+      this.playerName = name.trim().slice(0, 16);
+      this.save();
+    }
+    return this.playerName;
+  }
+
   _serialize() {
     return {
       version: SAVE_VERSION,
       updatedAt: Date.now(),
+      playerName: this.playerName,
       party: this.party,
       storage: this.storage,
       bag: this.bag,
@@ -115,6 +125,11 @@ class GameState {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return false;
     }
+
+    this.playerName =
+      typeof parsed.playerName === 'string' && parsed.playerName.trim()
+        ? parsed.playerName.trim().slice(0, 16)
+        : 'Arion';
 
     const starterId =
       typeof parsed.starterId === 'string' && MONSTERS[parsed.starterId]
@@ -191,8 +206,11 @@ class GameState {
     }
   }
 
-  resetNewGame(starterId = 'pyrofang') {
+  resetNewGame(starterId = 'pyrofang', playerName = null) {
     const validStarter = MONSTERS[starterId] ? starterId : 'pyrofang';
+    if (typeof playerName === 'string' && playerName.trim()) {
+      this.playerName = playerName.trim().slice(0, 16);
+    }
     this.starterId = validStarter;
     this.party = [createMonsterInstance(validStarter, 5)];
     this.storage = [];

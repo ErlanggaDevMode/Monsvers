@@ -710,15 +710,26 @@ export class BattleScene extends Phaser.Scene {
             title: 'CAPTURED!',
             subtitle: `${this.enemy.name} ${destLabel}`,
             accentColor: 0x38bdf8,
-            extraNote: `Catch Rate: ${Math.round(cap.catchRate * 100)}%`,
+            extraNote: `Catch Rate: ${Math.round(cap.catchRate * 100)}% • ${this.enemy.name} ${destLabel}`,
           });
         } else {
-          this._showNextBattleModal(
-            'CAPTURED!',
-            `${this.enemy.name} masuk ke Rift Storage!`,
-            `Catch Rate: ${Math.round(cap.catchRate * 100)}%\nTim siap melanjutkan petualangan.`,
-            0x38bdf8
-          );
+          await this._transitionToOutcome({
+            outcome: 'victory',
+            mode: 'quick',
+            runtime: this.runtime,
+            title: 'CAPTURED!',
+            subtitle: `${this.enemy.name} masuk ke Rift Storage!`,
+            xpGained: 25 + this.enemy.level * 10,
+            leveledUp: false,
+            newLevel: this.player.level,
+            capturedNote: `Catch Rate: ${Math.round(cap.catchRate * 100)}%`,
+            playerSnapshot: { ...this.player },
+            enemyName: this.enemy.name,
+            battleNumber: this.battleNumber,
+            quickParty: this.party,
+            quickActiveIndex: this.activePartyIndex,
+            quickBag: this.bag,
+          });
         }
         return;
       }
@@ -839,24 +850,19 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.mode === 'campaign') {
       gameState.healAllParty();
-      this.hud.showResultModal({
-        title: 'DEFEATED',
-        subtitle: 'Seluruh Monsver dalam party tumbang!',
-        detail: 'Tim telah dipulihkan di Camp.\nLatih Monsver-mu dan coba lagi!',
-        buttonLabel: 'KEMBALI KE MAP',
-        accentColor: 0xef4444,
-        onAction: () => this.scene.start('WorldMapScene', { chapter: this.node?.chapter ?? 1 }),
-      });
-      return;
     }
 
-    this.hud.showResultModal({
+    await this._delay(450);
+    await this._transitionToOutcome({
+      outcome: 'defeat',
+      mode: this.mode,
+      runtime: this.runtime,
+      node: this.node,
       title: 'DEFEATED',
       subtitle: 'Seluruh Monsver dalam party tumbang!',
-      detail: `Tantangan berhenti di Battle #${this.battleNumber}.\nPulihkan tim dan coba lagi!`,
-      buttonLabel: 'PLAY AGAIN',
-      accentColor: 0xef4444,
-      onAction: () => this.scene.restart({ mode: 'quick', runtime: this.runtime, battleNumber: 1 }),
+      playerSnapshot: { ...this.player },
+      enemyName: this.enemy.name,
+      battleNumber: this.battleNumber,
     });
   }
 
@@ -889,14 +895,24 @@ export class BattleScene extends Phaser.Scene {
 
     const lvlNote = xpRes.leveledUp ? `\nLEVEL UP! ${this.player.name} naik ke Lv.${xpRes.newLevel}!` : '';
     this.hud.setLog(`${this.enemy.name} tumbang! +${xpGain} XP.${lvlNote}`);
-    await this._delay(850);
+    await this._delay(750);
 
-    this._showNextBattleModal(
-      'VICTORY!',
-      `${this.enemy.name} berhasil dikalahkan!`,
-      `${this.player.name} mendapat +${xpGain} XP${lvlNote}`,
-      0x22c55e
-    );
+    await this._transitionToOutcome({
+      outcome: 'victory',
+      mode: 'quick',
+      runtime: this.runtime,
+      title: 'VICTORY!',
+      subtitle: `${this.enemy.name} berhasil dikalahkan!`,
+      xpGained: xpGain,
+      leveledUp: xpRes.leveledUp,
+      newLevel: xpRes.newLevel,
+      playerSnapshot: { ...this.player },
+      enemyName: this.enemy.name,
+      battleNumber: this.battleNumber,
+      quickParty: this.party,
+      quickActiveIndex: this.activePartyIndex,
+      quickBag: this.bag,
+    });
   }
 
   _applyXpResult(xpRes) {
@@ -974,17 +990,17 @@ export class BattleScene extends Phaser.Scene {
 
     const lvlNote = xpRes.leveledUp ? ` • LEVEL UP Lv.${xpRes.newLevel}!` : '';
     this.hud.setLog(`+${xpGain} XP & +${node.goldReward ?? 0}G!${lvlNote}`);
-    await this._delay(750);
+    await this._delay(700);
 
     // Check evolution trigger
-    let evoNote = '';
+    let evoInfo = null;
     const shouldEvolve =
       xpRes.canEvolve ||
       Boolean(this.player.evolvesTo && this.player.evolvesAt && this.player.level >= this.player.evolvesAt);
     if (shouldEvolve) {
       const evo = gameState.applyEvolution(this.player);
       if (evo) {
-        evoNote = `\n${evo.oldName} berevolusi menjadi ${evo.newName}!`;
+        evoInfo = evo;
         await this._showEvolutionCeremony(evo);
       }
     }
@@ -992,28 +1008,44 @@ export class BattleScene extends Phaser.Scene {
     // Clear node & persist rewards
     gameState.markNodeCleared(node.id, node.goldReward ?? 0, node.itemRewards ?? {});
 
-    // Play post-battle dialogue (and ending dialogue if final node)
+    // Play post-battle dialogue before moving to full-screen Outcome/Ending scene
     if (Array.isArray(node.postDialogue) && node.postDialogue.length > 0) {
       await new DialogueBox(this).play(node.postDialogue);
     }
-    if (getNextNodeId(node.id) === null && Array.isArray(ENDING_DIALOGUE) && ENDING_DIALOGUE.length > 0) {
-      await new DialogueBox(this).play(ENDING_DIALOGUE);
-    }
 
-    const detailLines = [
-      `${this.player.name} mendapat +${xpGain} XP${lvlNote}`,
-      `Reward: +${node.goldReward ?? 0} Gold`,
-    ];
-    if (extraNote) detailLines.push(extraNote);
-    if (evoNote) detailLines.push(evoNote.trim());
+    const isFinalCampaignClear = getNextNodeId(node.id) === null;
 
-    this.hud.showResultModal({
+    await this._transitionToOutcome({
+      outcome: isFinalCampaignClear ? 'campaign_clear' : 'victory',
+      mode: 'campaign',
+      runtime: this.runtime,
+      node,
       title,
       subtitle,
-      detail: detailLines.join('\n'),
-      buttonLabel: 'KEMBALI KE MAP',
       accentColor,
-      onAction: () => this.scene.start('WorldMapScene', { chapter: node.chapter }),
+      xpGained: xpGain,
+      leveledUp: xpRes.leveledUp,
+      newLevel: xpRes.newLevel,
+      evoInfo,
+      goldReward: node.goldReward ?? 0,
+      itemRewards: node.itemRewards ?? {},
+      capturedNote: extraNote,
+      playerSnapshot: { ...this.player },
+      enemyName: this.enemy.name,
+    });
+  }
+
+  _transitionToOutcome(payload) {
+    return new Promise((resolve) => {
+      if (!this.scene.isActive()) {
+        resolve();
+        return;
+      }
+      this.cameras.main.fadeOut(260, 5, 8, 17);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('BattleOutcomeScene', payload);
+        resolve();
+      });
     });
   }
 

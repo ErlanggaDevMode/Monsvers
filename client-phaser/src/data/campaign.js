@@ -501,3 +501,90 @@ export function getNextNodeId(id) {
 export function getNodesByChapter(chapterId) {
   return CAMPAIGN_NODES.filter((n) => n.chapter === chapterId);
 }
+
+/**
+ * Preset MC (Main Character) names for quick one-tap mobile selection.
+ */
+export const MC_PRESET_NAMES = ['Arion', 'Sora', 'Kaen', 'Zera'];
+
+/**
+ * 3-Act Prologue introducing the Main Character (MC) at the start of Campaign.
+ */
+export const PROLOGUE_ACTS = [
+  {
+    id: 'act1_mc_intro',
+    tag: 'PROLOG • BABAK 1/3',
+    location: 'DESA SOLARA — FAJAR DI BENUA AETHERIA',
+    backdrop: 'bg_arena_solara',
+    tint: 0x7c93b5,
+    dialogue: [
+      {
+        speaker: 'Narator',
+        portrait: 'portrait_player',
+        text: 'Di benua Aetheria, manusia dan makhluk elemental bernama Monsver telah hidup berdampingan selama berabad-abad.',
+      },
+      {
+        speaker: 'Tamer Muda (MC)',
+        portrait: 'portrait_player',
+        text: 'Hari ini akhirnya tiba! Setelah bertahun-tahun belajar di Desa Solara, aku siap menjadi Tamer sejati dan memiliki Monsver pertamaku!',
+      },
+    ],
+  },
+  {
+    id: 'act2_eclipse_rift',
+    tag: 'PROLOG • BABAK 2/3',
+    location: 'PUNCAK MENARA ECLIPSE — MALAM GERHANA',
+    backdrop: 'bg_arena_eclipse',
+    tint: 0x9b7bc4,
+    dialogue: [
+      {
+        speaker: 'Narator',
+        portrait: 'portrait_umbravex',
+        text: 'Namun ketenangan itu mendadak pecah! Langit Aetheria terbelah oleh retakan energi kuno bernama Eclipse Rift!',
+      },
+      {
+        speaker: 'Tamer Muda (MC)',
+        portrait: 'portrait_player',
+        text: 'Cahaya ungu dari Menara Eclipse itu... seluruh hutan bergetar! Para Monsver liar dan Apex Guardian mulai kehilangan kendali!',
+      },
+    ],
+  },
+  {
+    id: 'act3_orin_call',
+    tag: 'PROLOG • BABAK 3/3',
+    location: 'LABORATORIUM PROF. ORIN — DESA SOLARA',
+    backdrop: 'bg_arena_solara',
+    tint: 0x6280a8,
+    dialogue: [
+      {
+        speaker: 'Prof. Orin',
+        portrait: 'portrait_orin',
+        text: 'Syukurlah kau datang tepat waktu! Aetheria membutuhkan Tamer berhati murni untuk menenangkan para Guardian dan menyegel Eclipse Rift.',
+      },
+      {
+        speaker: 'Tamer Muda (MC)',
+        portrait: 'portrait_player',
+        text: 'Aku tidak akan lari, Prof! Bersama partner Monsver pertamaku, aku akan menempuh 4 wilayah Aetheria dan menyelamatkan dunia ini!',
+      },
+    ],
+  },
+];
+
+/**
+ * Encouraging dialogue played on the Defeat screen in Campaign mode.
+ * @param {string} playerName
+ */
+export function getDefeatDialogue(playerName = 'Arion') {
+  return [
+    {
+      speaker: playerName,
+      portrait: 'portrait_player',
+      text: 'Sial... serangan mereka kuat sekali. Tapi aku tidak boleh menyerah sampai di sini!',
+    },
+    {
+      speaker: 'Prof. Orin',
+      portrait: 'portrait_orin',
+      text: `Tenang, ${playerName}. Tim Monsver-mu sudah pulih penuh di Camp Solara. Atur strategi elemenmu dan bangkit lagi!`,
+    },
+  ];
+}

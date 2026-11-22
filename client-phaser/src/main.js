@@ -2,9 +2,11 @@ import Phaser from 'phaser';
 import { audioManager } from './audio/audioManager.js';
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
+import { PrologueScene } from './scenes/PrologueScene.js';
 import { StarterSelectScene } from './scenes/StarterSelectScene.js';
 import { WorldMapScene } from './scenes/WorldMapScene.js';
 import { BattleScene } from './scenes/BattleScene.js';
+import { BattleOutcomeScene } from './scenes/BattleOutcomeScene.js';
 
 // Best-effort WebAudio unlock on first user interaction
 const unlockAudioOnce = () => {
@@ -36,7 +38,15 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, TitleScene, StarterSelectScene, WorldMapScene, BattleScene],
+  scene: [
+    BootScene,
+    TitleScene,
+    PrologueScene,
+    StarterSelectScene,
+    WorldMapScene,
+    BattleScene,
+    BattleOutcomeScene,
+  ],
 };
 
 new Phaser.Game(config);
