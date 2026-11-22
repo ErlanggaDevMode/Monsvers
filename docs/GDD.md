@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Genre:** Turn-Based Monster Battle RPG (Story / Campaign)  
 **Visual Style:** Pixel Art Semi-Modern (HD-2D inspired crisp pixel sprites + modern particles, shaders/lighting & smooth tweens)  
-**Platform Target:** Mobile-First Web (Portrait `9:16`, logical canvas `360×640` with `Phaser.Scale.FIT` & integer/crisp pixel rendering — playable one-handed on mobile and centered cleanly on desktop)  
+**Platform Target:** Mobile-First Landscape Web (`16:9`, logical canvas `640×360` with `Phaser.Scale.FIT` & crisp pixel rendering — nyaman dua jempol di HP landscape & tampil penuh di desktop, dilengkapi hint otomatis bila dibuka di portrait)  
 **Tech Stack:** **Phaser 3 + Vite** (Client) + **C++20 → WebAssembly (Emscripten)** (Deterministic Battle & AI Core)
 
 ---

@@ -22,8 +22,8 @@
         height: 100%;
         background: #070b14;
         background-image:
-          radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.12), transparent 55%),
-          radial-gradient(circle at 50% 85%, rgba(249, 115, 22, 0.08), transparent 50%);
+          radial-gradient(circle at 30% 25%, rgba(56, 189, 248, 0.14), transparent 55%),
+          radial-gradient(circle at 75% 80%, rgba(249, 115, 22, 0.1), transparent 50%);
         color: #f8fafc;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         overflow: hidden;
@@ -49,17 +49,99 @@
           0 0 0 1px rgba(148, 163, 184, 0.12),
           0 24px 64px rgba(0, 0, 0, 0.72);
       }
-      @media (max-width: 480px) {
+      @media (max-width: 767px) {
         canvas {
           border: none;
           border-radius: 0;
           box-shadow: none;
         }
       }
+
+      /* Sleek non-blocking portrait orientation hint for mobile phones */
+      #landscape-banner {
+        display: none;
+        position: fixed;
+        top: calc(10px + env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        width: calc(100vw - 24px);
+        max-width: 420px;
+        padding: 10px 12px;
+        background: rgba(11, 18, 34, 0.94);
+        border: 1.5px solid #38bdf8;
+        border-radius: 10px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 11px;
+        line-height: 1.35;
+        color: #e2e8f0;
+      }
+      #landscape-banner .banner-msg {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #landscape-banner .banner-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: rgba(56, 189, 248, 0.16);
+        color: #38bdf8;
+        font-size: 14px;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+      #landscape-banner button {
+        background: #38bdf8;
+        color: #070b14;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      #landscape-banner button:active {
+        transform: scale(0.96);
+      }
+      #landscape-banner.dismissed {
+        display: none !important;
+      }
+      @media (orientation: portrait) and (max-width: 767px) {
+        #landscape-banner {
+          display: flex;
+        }
+      }
     </style>
   </head>
   <body>
+    <div id="landscape-banner" role="status" aria-live="polite">
+      <div class="banner-msg">
+        <span class="banner-icon" aria-hidden="true">↻</span>
+        <span>Putar layar ke Landscape untuk tampilan optimal</span>
+      </div>
+      <button id="dismiss-landscape-banner" type="button">Lanjut</button>
+    </div>
     <div id="game-container"></div>
+    <script>
+      (function () {
+        var btn = document.getElementById('dismiss-landscape-banner');
+        var banner = document.getElementById('landscape-banner');
+        if (btn && banner) {
+          btn.addEventListener('click', function () {
+            banner.classList.add('dismissed');
+          });
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

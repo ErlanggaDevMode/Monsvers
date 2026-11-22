@@ -7,6 +7,7 @@ import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { BattleHud, ELEMENT_META } from '../ui/BattleHud.js';
 import { DialogueBox } from '../ui/DialogueBox.js';
 import { gameState } from '../state/gameState.js';
+import { audioManager } from '../audio/audioManager.js';
 
 const FONT = 'monospace';
 
@@ -23,10 +24,11 @@ export class BattleScene extends Phaser.Scene {
     this.battleNumber = data?.battleNumber ?? 1;
     this.isBusy = false;
     this.battleEnded = false;
+    this.bossPhase2Triggered = false;
+    this.bossAuraRing = null;
     this.seedCounter = (Date.now() % 100000) + this.battleNumber * 97;
 
     if (this.mode === 'campaign' && this.node) {
-      // Ensure at least one party member is alive when entering campaign battle
       if (!gameState.party.some((m) => m.currentHp > 0)) {
         gameState.healAllParty();
       }
@@ -36,7 +38,6 @@ export class BattleScene extends Phaser.Scene {
       this.enemy = createMonsterInstance(this.node.enemyId, this.node.enemyLevel);
       this.aiTier = this.node.aiTier ?? AiTier.Trainer;
     } else {
-      // Quick Battle mode (standalone)
       if (Array.isArray(data?.party) && data.party.length > 0) {
         this.party = data.party;
         this.activePartyIndex = data.activePartyIndex ?? 0;
@@ -56,12 +57,17 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.idleFrame = 0;
-    this.playerPos = { x: 86, y: 242 };
-    this.enemyPos = { x: 274, y: 146 };
+    // Landscape 640x360 arena positions (y: 32..234)
+    this.playerPos = { x: 158, y: 184 };
+    this.enemyPos = { x: 484, y: 112 };
   }
 
   get player() {
     return this.party[this.activePartyIndex];
+  }
+
+  get isBossBattle() {
+    return this.aiTier === AiTier.Boss || this.node?.type === 'boss';
   }
 
   nextSeed() {
@@ -88,12 +94,16 @@ export class BattleScene extends Phaser.Scene {
     });
 
     this.hud.setEngineRuntime(this.runtime);
+    this.hud.setExitLabel(this.mode === 'campaign' ? 'MAP' : 'RST');
     if (this.mode === 'campaign' && this.node) {
       this.hud.setStageTitle(`CH.${this.node.chapter} ${this.node.title.toUpperCase()}`);
     } else {
       this.hud.setStageTitle(`QUICK BATTLE #${this.battleNumber}`);
     }
     this._syncHud(false);
+
+    // Start battle or boss BGM
+    audioManager.playBgm(this.isBossBattle ? 'boss' : 'battle');
 
     // 2-frame pixel idle animation timer
     this.time.addEvent({
@@ -119,7 +129,9 @@ export class BattleScene extends Phaser.Scene {
         : this.mode === 'campaign' && this.node?.type === 'rival'
           ? 'Rival '
           : 'Wild ';
-    this.hud.setLog(`${introPrefix}${this.enemy.name} (Lv.${this.enemy.level}) muncul!\nPilih aksi untuk ${this.player.name}.`);
+    this.hud.setLog(
+      `${introPrefix}${this.enemy.name} (Lv.${this.enemy.level}) muncul!\nPilih aksi untuk ${this.player.name}.`
+    );
   }
 
   _buildArenaBackdrop() {
@@ -128,70 +140,58 @@ export class BattleScene extends Phaser.Scene {
         ? this.node.arenaTheme
         : 'bg_arena_solara';
 
-    // Arena area: y: 42..350 (height 308, width 360)
+    // Wide Arena area: y: 32..234 (height 202, width 640)
     if (this.textures.exists(themeKey)) {
-      const bg = this.add.image(180, 196, themeKey).setDepth(0);
-      bg.setDisplaySize(360, 312);
+      const bg = this.add.image(320, 133, themeKey).setDepth(0);
+      bg.setDisplaySize(640, 204);
     } else {
       const g = this.add.graphics().setDepth(0);
       g.fillStyle(0x0c172e, 1);
-      g.fillRect(0, 42, 360, 68);
+      g.fillRect(0, 32, 640, 56);
       g.fillStyle(0x132645, 1);
-      g.fillRect(0, 110, 360, 56);
+      g.fillRect(0, 88, 640, 48);
       g.fillStyle(0x1b3a54, 1);
-      g.fillRect(0, 166, 360, 48);
+      g.fillRect(0, 136, 640, 36);
 
       g.fillStyle(0x102538, 1);
-      g.fillTriangle(0, 214, 70, 146, 150, 214);
-      g.fillTriangle(110, 214, 210, 134, 310, 214);
-      g.fillTriangle(250, 214, 330, 152, 360, 214);
-
-      g.fillStyle(0x0f332c, 1);
-      for (let x = 0; x < 360; x += 28) {
-        g.fillRect(x, 194 + ((x * 7) % 12), 26, 26);
-      }
+      g.fillTriangle(0, 172, 120, 108, 240, 172);
+      g.fillTriangle(190, 172, 340, 96, 490, 172);
+      g.fillTriangle(430, 172, 560, 114, 640, 172);
 
       g.fillStyle(0x173c32, 1);
-      g.fillRect(0, 214, 360, 44);
+      g.fillRect(0, 172, 640, 28);
       g.fillStyle(0x122f2a, 1);
-      g.fillRect(0, 258, 360, 96);
-
-      g.fillStyle(0x22c55e, 0.25);
-      for (let i = 0; i < 18; i++) {
-        const gx = (i * 43 + 12) % 348;
-        const gy = 222 + ((i * 29) % 112);
-        g.fillRect(gx, gy, 6, 2);
-      }
+      g.fillRect(0, 200, 640, 36);
     }
 
-    // Crisp battle platforms
+    // Crisp grounded battle platforms right underneath each sprite
     const plat = this.add.graphics().setDepth(4);
     plat.fillStyle(0x091521, 0.72);
-    plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 42, 122, 30);
+    plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 38, 136, 30);
     plat.fillStyle(0x1e4d3e, 0.9);
-    plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 38, 114, 24);
+    plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 34, 126, 24);
     plat.lineStyle(2, 0x34d399, 0.45);
-    plat.strokeEllipse(this.enemyPos.x, this.enemyPos.y + 38, 114, 24);
+    plat.strokeEllipse(this.enemyPos.x, this.enemyPos.y + 34, 126, 24);
 
     plat.fillStyle(0x091521, 0.78);
-    plat.fillEllipse(this.playerPos.x, this.playerPos.y + 46, 134, 32);
+    plat.fillEllipse(this.playerPos.x, this.playerPos.y + 42, 152, 32);
     plat.fillStyle(0x1e4d3e, 0.95);
-    plat.fillEllipse(this.playerPos.x, this.playerPos.y + 42, 126, 26);
+    plat.fillEllipse(this.playerPos.x, this.playerPos.y + 38, 142, 26);
     plat.lineStyle(2, 0x38bdf8, 0.45);
-    plat.strokeEllipse(this.playerPos.x, this.playerPos.y + 42, 126, 26);
+    plat.strokeEllipse(this.playerPos.x, this.playerPos.y + 38, 142, 26);
 
-    // Ambient floating fireflies
-    for (let i = 0; i < 8; i++) {
+    // Ambient floating fireflies spread across 640px arena
+    for (let i = 0; i < 10; i++) {
       const mote = this.add
-        .rectangle(24 + i * 44, 90 + (i % 3) * 52, 3, 3, i % 2 === 0 ? 0xfde047 : 0x38bdf8, 0.55)
+        .rectangle(36 + i * 62, 54 + (i % 3) * 44, 3, 3, i % 2 === 0 ? 0xfde047 : 0x38bdf8, 0.55)
         .setDepth(5);
       this.tweens.add({
         targets: mote,
-        y: mote.y - 18,
+        y: mote.y - 16,
         alpha: 0.12,
         yoyo: true,
         repeat: -1,
-        duration: 1600 + i * 240,
+        duration: 1600 + i * 200,
         ease: 'Sine.easeInOut',
       });
     }
@@ -199,22 +199,22 @@ export class BattleScene extends Phaser.Scene {
 
   _buildMonsterSprites() {
     this.enemyShadow = this.add
-      .ellipse(this.enemyPos.x, this.enemyPos.y + 38, 66, 14, 0x020617, 0.5)
+      .ellipse(this.enemyPos.x, this.enemyPos.y + 34, 72, 14, 0x020617, 0.52)
       .setDepth(8);
     this.playerShadow = this.add
-      .ellipse(this.playerPos.x, this.playerPos.y + 42, 74, 16, 0x020617, 0.55)
+      .ellipse(this.playerPos.x, this.playerPos.y + 38, 82, 16, 0x020617, 0.56)
       .setDepth(8);
 
-    // Clean monster sprite scales (enemy: 1.6, player: 1.8)
+    // Landscape monster sprite scales (enemy: 1.65, player: 1.85)
     this.enemySprite = this.add
       .image(this.enemyPos.x, this.enemyPos.y, getMonsterTextureKey(this.enemy.id, 0))
-      .setScale(1.6)
+      .setScale(1.65)
       .setFlipX(true)
       .setDepth(10);
 
     this.playerSprite = this.add
       .image(this.playerPos.x, this.playerPos.y, getMonsterTextureKey(this.player.id, 0))
-      .setScale(1.8)
+      .setScale(1.85)
       .setDepth(12);
 
     this._startIdleTweens();
@@ -340,7 +340,11 @@ export class BattleScene extends Phaser.Scene {
     }
     sprite.setTintFill(0xffffff);
     await this._delay(80);
-    sprite.clearTint();
+    if (sprite === this.enemySprite && this.bossPhase2Triggered) {
+      sprite.setTint(0xf0abfc);
+    } else {
+      sprite.clearTint();
+    }
     await new Promise((resolve) => {
       this.tweens.add({
         targets: sprite,
@@ -354,6 +358,64 @@ export class BattleScene extends Phaser.Scene {
         },
       });
     });
+  }
+
+  async _checkBossPhase2() {
+    if (!this.isBossBattle || this.bossPhase2Triggered) return;
+    if (this.enemy.currentHp <= 0 || this.enemy.currentHp > this.enemy.maxHp * 0.5) return;
+
+    this.bossPhase2Triggered = true;
+    audioManager.playSfx('boss_phase2');
+
+    // Dramatic crimson/purple camera flash, shake & 28-particle burst
+    this.cameras.main.flash(320, 168, 28, 120);
+    this.cameras.main.shake(360, 0.014);
+    this._spawnParticles(this.enemyPos.x, this.enemyPos.y, 0xc026d3, 28);
+
+    // Awakening aura tint + pulsing crimson/purple ring behind boss
+    this.enemySprite.setTint(0xf0abfc);
+    if (!this.bossAuraRing) {
+      this.bossAuraRing = this.add
+        .circle(this.enemyPos.x, this.enemyPos.y + 4, 46, 0x9333ea, 0.22)
+        .setStrokeStyle(2, 0xf43f5e, 0.85)
+        .setDepth(9);
+      this.tweens.add({
+        targets: this.bossAuraRing,
+        scale: 1.22,
+        alpha: 0.42,
+        yoyo: true,
+        repeat: -1,
+        duration: 720,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
+    // Boost ATK+ for 4 turns & heal 10% adrenaline HP
+    const healAmt = Math.max(1, Math.round(this.enemy.maxHp * 0.1));
+    this.enemy.currentHp = Math.min(this.enemy.maxHp, this.enemy.currentHp + healAmt);
+    this.enemy.status = 'AttackUp';
+    this.enemy.statusTurns = 4;
+
+    this.hud.setBossPhase2(true);
+    this._syncHud(true);
+
+    this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 36, 'PHASE 2 AWAKENED!', '#f43f5e', '13px');
+    this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 16, `+${healAmt} HP  ATK+`, '#e879f9', '11px');
+    this.hud.setLog(`${this.enemy.name} membangkitkan PHASE 2! (+${healAmt} HP & ATK+ aktif!)`);
+    await this._delay(650);
+
+    const phase2Lines =
+      Array.isArray(this.node?.phase2Dialogue) && this.node.phase2Dialogue.length > 0
+        ? this.node.phase2Dialogue
+        : [
+            {
+              speaker: this.enemy.name,
+              portrait: this.enemy.id === 'umbravex' ? 'portrait_umbravex' : 'portrait_warden',
+              text: `${this.enemy.name.toUpperCase()} mengaum dahsyat! Aura kegelapan Eclipse melonjak — kekuatan Phase 2 telah bangkit!`,
+            },
+          ];
+
+    await new DialogueBox(this).play(phase2Lines);
   }
 
   async _executeAttack(attacker, defender, skill, isPlayerAttacking) {
@@ -372,15 +434,17 @@ export class BattleScene extends Phaser.Scene {
     this._syncHud(true);
 
     if (report.paralyzed) {
+      audioManager.playSfx('status');
       this.hud.setLog(`${attacker.name} lumpuh dan tidak bisa bergerak!`);
       this._spawnPopup(atkHome.x, atkHome.y - 26, 'PARALYZED!', '#facc15', '12px');
       await this._delay(650);
       return report;
     }
 
-    await this._animateLunge(atkSprite, atkHome, isPlayerAttacking ? 34 : -34, isPlayerAttacking ? -18 : 18);
+    await this._animateLunge(atkSprite, atkHome, isPlayerAttacking ? 42 : -42, isPlayerAttacking ? -16 : 16);
 
     if (report.missed) {
+      audioManager.playSfx('miss');
       this.hud.setLog(`${attacker.name} memakai ${skill.name}, tetapi meleset!`);
       this._spawnPopup(defHome.x, defHome.y - 24, 'MISS!', '#94a3b8', '13px');
       await this._delay(600);
@@ -392,9 +456,12 @@ export class BattleScene extends Phaser.Scene {
       this._spawnParticles(atkHome.x, atkHome.y, vfxColor, 16);
       let logMsg = `${attacker.name} memakai ${skill.name}!`;
       if ((report.healed ?? 0) > 0) {
+        audioManager.playSfx('heal');
         attacker.currentHp = report.attackerRemainingHp ?? Math.min(attacker.maxHp, attacker.currentHp + report.healed);
         this._spawnPopup(atkHome.x, atkHome.y - 24, `+${report.healed} HP`, '#4ade80', '14px');
         logMsg += ` (+${report.healed} HP)`;
+      } else {
+        audioManager.playSfx('status');
       }
       if (report.appliedStatus === 'Shield' || report.appliedStatus === 'AttackUp') {
         attacker.status = report.appliedStatus;
@@ -413,10 +480,20 @@ export class BattleScene extends Phaser.Scene {
       return report;
     }
 
-    this._spawnParticles(defHome.x, defHome.y, vfxColor, report.critical ? 22 : 14);
-
     const isSuper = report.elementMultiplier > 1.05;
     const isResist = report.elementMultiplier < 0.95;
+
+    // Play contextual impact SFX
+    if (report.critical) {
+      audioManager.playSfx('crit');
+    } else if (isSuper) {
+      audioManager.playSfx('super');
+    } else {
+      audioManager.playSfx(isPlayerAttacking ? 'attack' : 'hit');
+    }
+
+    this._spawnParticles(defHome.x, defHome.y, vfxColor, report.critical ? 22 : 14);
+
     const shake = report.critical ? 0.015 : isSuper ? 0.009 : 0;
 
     defender.currentHp = report.targetRemainingHp;
@@ -438,6 +515,7 @@ export class BattleScene extends Phaser.Scene {
     if (isSuper) logMsg += ' Super Effective!';
 
     if (report.appliedStatus && report.appliedStatus !== 'None') {
+      audioManager.playSfx('status');
       defender.status = report.appliedStatus;
       defender.statusTurns = report.statusTurns || 3;
       this._spawnPopup(defHome.x, defHome.y - 4, `${report.appliedStatus.toUpperCase()}!`, '#f97316', '11px');
@@ -482,6 +560,8 @@ export class BattleScene extends Phaser.Scene {
         await this._handleVictory();
         return;
       }
+      await this._checkBossPhase2();
+
       const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
       if (eRes.targetFainted) {
         await this._handlePlayerFainted();
@@ -498,6 +578,7 @@ export class BattleScene extends Phaser.Scene {
         await this._handleVictory();
         return;
       }
+      await this._checkBossPhase2();
     }
 
     await this._runEndOfTurnPhase();
@@ -507,6 +588,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.isBusy || this.battleEnded) return;
     this._setBusy(true);
 
+    audioManager.playSfx('guard');
     const guardRes = battleBridge.resolveGuard(this.player);
     this.player.guarding = true;
     this.player.currentSp = guardRes.currentSp;
@@ -543,6 +625,7 @@ export class BattleScene extends Phaser.Scene {
         this._setBusy(false);
         return;
       }
+      audioManager.playSfx('heal');
       this.bag[itemId] -= 1;
       const before = this.player.currentHp;
       this.player.currentHp = Math.min(this.player.maxHp, this.player.currentHp + healAmount);
@@ -551,7 +634,9 @@ export class BattleScene extends Phaser.Scene {
 
       this._spawnParticles(this.playerPos.x, this.playerPos.y, 0x4ade80, 14);
       this._spawnPopup(this.playerPos.x, this.playerPos.y - 26, `+${actual} HP`, '#4ade80', '14px');
-      this.hud.setLog(`Menggunakan ${itemId === 'super_potion' ? 'Super Potion' : 'Potion'}! ${this.player.name} pulih +${actual} HP.`);
+      this.hud.setLog(
+        `Menggunakan ${itemId === 'super_potion' ? 'Super Potion' : 'Potion'}! ${this.player.name} pulih +${actual} HP.`
+      );
       await this._delay(700);
     } else if (itemId === 'antidote') {
       if (!this.player.status || this.player.status === 'None') {
@@ -559,6 +644,7 @@ export class BattleScene extends Phaser.Scene {
         this._setBusy(false);
         return;
       }
+      audioManager.playSfx('heal');
       this.bag.antidote -= 1;
       this.player.status = 'None';
       this.player.statusTurns = 0;
@@ -569,11 +655,15 @@ export class BattleScene extends Phaser.Scene {
       this.hud.setLog(`Antidote menyembuhkan status ${this.player.name}!`);
       await this._delay(650);
     } else if (itemId === 'rift_orb') {
+      audioManager.playSfx('capture_throw');
       this.bag.rift_orb -= 1;
       this._syncHud(true);
       this.hud.setLog(`Melempar Rift Orb ke ${this.enemy.name}...`);
 
-      const orb = this.add.circle(this.playerPos.x + 20, this.playerPos.y - 10, 8, 0x38bdf8).setStrokeStyle(2, 0xf8fafc).setDepth(35);
+      const orb = this.add
+        .circle(this.playerPos.x + 24, this.playerPos.y - 10, 8, 0x38bdf8)
+        .setStrokeStyle(2, 0xf8fafc)
+        .setDepth(35);
       await new Promise((resolve) => {
         this.tweens.add({
           targets: orb,
@@ -605,7 +695,9 @@ export class BattleScene extends Phaser.Scene {
       orb.destroy();
 
       if (cap.captured) {
+        audioManager.playSfx('capture_ok');
         this.enemySprite.setVisible(false);
+        this.bossAuraRing?.setVisible(false);
         this.battleEnded = true;
         this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'CAPTURED!', '#38bdf8', '16px');
         this.hud.setLog(`Berhasil! ${this.enemy.name} tertangkap oleh Rift Orb!`);
@@ -631,6 +723,7 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
 
+      audioManager.playSfx('capture_fail');
       this.enemySprite.setAlpha(1);
       this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'BROKE FREE!', '#f97316', '12px');
       this.hud.setLog(`${this.enemy.name} berhasil melepaskan diri dari Rift Orb!`);
@@ -688,6 +781,7 @@ export class BattleScene extends Phaser.Scene {
     this.player.statusTurns = pTick.nextStatusTurns;
 
     if (pTick.damage > 0) {
+      audioManager.playSfx('status');
       this._syncHud(true);
       this._spawnPopup(this.playerPos.x, this.playerPos.y - 22, `-${pTick.damage} ${pTick.status}`, '#f97316', '12px');
       this.hud.setLog(pTick.message);
@@ -705,6 +799,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemy.statusTurns = eTick.nextStatusTurns;
 
     if (eTick.damage > 0) {
+      audioManager.playSfx('status');
       this._syncHud(true);
       this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 22, `-${eTick.damage} ${eTick.status}`, '#f97316', '12px');
       this.hud.setLog(eTick.message);
@@ -713,6 +808,7 @@ export class BattleScene extends Phaser.Scene {
         await this._handleVictory();
         return;
       }
+      await this._checkBossPhase2();
     }
 
     this._syncHud(true);
@@ -722,6 +818,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   async _handlePlayerFainted() {
+    audioManager.playSfx('hit');
     this._spawnParticles(this.playerPos.x, this.playerPos.y, 0xef4444, 18);
     this.playerSprite.setAlpha(0.25);
     this.hud.setLog(`${this.player.name} tumbang!`);
@@ -737,6 +834,8 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.battleEnded = true;
+    audioManager.stopBgm();
+    audioManager.playSfx('defeat');
 
     if (this.mode === 'campaign') {
       gameState.healAllParty();
@@ -763,7 +862,11 @@ export class BattleScene extends Phaser.Scene {
 
   async _handleVictory() {
     this.battleEnded = true;
+    audioManager.stopBgm();
+    audioManager.playSfx('victory');
+
     this._spawnParticles(this.enemyPos.x, this.enemyPos.y, 0xfde047, 24);
+    this.bossAuraRing?.setVisible(false);
     this.tweens.add({
       targets: this.enemySprite,
       alpha: 0,
@@ -808,13 +911,16 @@ export class BattleScene extends Phaser.Scene {
     this._syncHud(true);
 
     if (xpRes.leveledUp) {
+      audioManager.playSfx('levelup');
       this._spawnPopup(this.playerPos.x, this.playerPos.y - 34, `LEVEL UP! Lv.${xpRes.newLevel}`, '#fde047', '14px');
     }
   }
 
   async _showEvolutionCeremony(evo) {
-    const cx = 180;
-    const cy = 196;
+    const cx = 320;
+    const cy = 148;
+
+    audioManager.playSfx('evolve');
 
     // Flash player sprite and swap texture
     this.playerSprite.setTintFill(0xfef08a);
@@ -826,19 +932,19 @@ export class BattleScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: this.playerSprite,
-      scale: 2.15,
+      scale: 2.2,
       yoyo: true,
       duration: 240,
       ease: 'Back.easeOut',
-      onComplete: () => this.playerSprite.setScale(1.8),
+      onComplete: () => this.playerSprite.setScale(1.85),
     });
 
     const banner = this.add.container(0, 0).setDepth(75);
-    const bg = this.add.rectangle(cx, cy, 326, 86, 0x0b1222, 0.96).setStrokeStyle(3, 0xfacc15);
+    const bg = this.add.rectangle(cx, cy, 380, 84, 0x0b1222, 0.96).setStrokeStyle(3, 0xfacc15);
     const title = this.add
       .text(cx, cy - 18, '★ EVOLUTION CEREMONY! ★', {
         fontFamily: FONT,
-        fontSize: '13px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#fde047',
       })
@@ -846,11 +952,11 @@ export class BattleScene extends Phaser.Scene {
     const msg = this.add
       .text(cx, cy + 12, `${evo.oldName} berevolusi menjadi ${evo.newName}!`, {
         fontFamily: FONT,
-        fontSize: '11px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#f8fafc',
         align: 'center',
-        wordWrap: { width: 300 },
+        wordWrap: { width: 344 },
       })
       .setOrigin(0.5);
 

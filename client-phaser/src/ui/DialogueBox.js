@@ -1,15 +1,12 @@
+import { audioManager } from '../audio/audioManager.js';
+
 const FONT = 'monospace';
 const TYPE_DELAY_MS = 22;
 const BASE_DEPTH = 200;
+const BLIP_CHAR_INTERVAL = 3;
 
-const CARD_X = 12;
-const CARD_Y = 454;
-const CARD_W = 336;
-const CARD_H = 170;
-
-const PORTRAIT_SIZE = 56;
-const PORTRAIT_X = CARD_X + 12 + PORTRAIT_SIZE / 2;
-const PORTRAIT_Y = CARD_Y + 22 + PORTRAIT_SIZE / 2;
+const PORTRAIT_SIZE = 72;
+const PORTRAIT_TARGET_SCALE = 1.4;
 
 const SPEAKER_THEMES = {
   orin: { bg: 0x0c4a6e, border: 0x38bdf8, text: '#7dd3fc', badgeFill: 0x082f49 },
@@ -47,7 +44,10 @@ export class DialogueBox {
     this._lineIndex = 0;
     this._fullText = '';
     this._charIndex = 0;
+    this._blipCounter = 0;
     this._isTyping = false;
+
+    this._layout = null;
 
     this._resolve = null;
     this._typeEvent = null;
@@ -70,8 +70,44 @@ export class DialogueBox {
       if (event.code === 'Space' || event.code === 'Enter') {
         this._handleAdvanceTap();
       } else if (event.code === 'Escape') {
+        audioManager.playSfx('click');
         this._finish();
       }
+    };
+  }
+
+  _computeLayout() {
+    const width = this.scene.scale?.width ?? 640;
+    const height = this.scene.scale?.height ?? 360;
+
+    // Optimized for 640x360 Landscape: card { x: 24, y: 238, w: 592, h: 110 }
+    const cardW = Math.min(592, Math.max(280, width - 48));
+    const cardH = Math.min(110, Math.max(92, height - 250));
+    const cardX = Math.round((width - cardW) / 2);
+    const cardY = Math.round(height - cardH - 12);
+
+    const portraitSize = PORTRAIT_SIZE;
+    const portraitPadX = 16;
+    const portraitX = cardX + portraitPadX + portraitSize / 2;
+    const portraitY = cardY + Math.round(cardH / 2);
+
+    const bodyX = cardX + portraitPadX + portraitSize + 16;
+    const bodyY = cardY + 16;
+    const bodyWrapW = Math.max(140, cardW - (bodyX - cardX) - 24);
+
+    return {
+      width,
+      height,
+      cardX,
+      cardY,
+      cardW,
+      cardH,
+      portraitSize,
+      portraitX,
+      portraitY,
+      bodyX,
+      bodyY,
+      bodyWrapW,
     };
   }
 
@@ -108,8 +144,22 @@ export class DialogueBox {
   }
 
   _buildOverlay() {
-    const width = this.scene.scale?.width ?? 360;
-    const height = this.scene.scale?.height ?? 640;
+    const layout = this._computeLayout();
+    this._layout = layout;
+    const {
+      width,
+      height,
+      cardX,
+      cardY,
+      cardW,
+      cardH,
+      portraitSize,
+      portraitX,
+      portraitY,
+      bodyX,
+      bodyY,
+      bodyWrapW,
+    } = layout;
 
     // 1. Full-screen semi-transparent backdrop dimmer blocking underlying scene clicks
     const backdrop = this._track(
@@ -124,21 +174,21 @@ export class DialogueBox {
       this._handleAdvanceTap();
     });
 
-    // 2. Crisp pixel-bordered dialogue card (x: 12, y: 454, w: 336, h: 170)
+    // 2. Wide bottom pixel-bordered dialogue card (640x360 -> x: 24, y: 238, w: 592, h: 110)
     this._cardGfx = this._track(
       this.scene.add.graphics().setScrollFactor(0).setDepth(BASE_DEPTH + 1)
     );
     this._drawCardFrame(0x3b4f78);
 
-    // 3. Speaker name pill badge above the box (left side)
+    // 3. Color-coded Speaker Name Pill above card (left side)
     this._speakerPillGfx = this._track(
       this.scene.add.graphics().setScrollFactor(0).setDepth(BASE_DEPTH + 2)
     );
     this._speakerText = this._track(
       this.scene.add
-        .text(CARD_X + 18, CARD_Y - 12, '', {
+        .text(cardX + 20, cardY - 12, '', {
           fontFamily: FONT,
-          fontSize: '11px',
+          fontSize: '12px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
@@ -147,11 +197,11 @@ export class DialogueBox {
         .setDepth(BASE_DEPTH + 3)
     );
 
-    // 4. Small SKIP >> button at top-right of dialogue box
-    const skipW = 68;
+    // 4. SKIP >> button at top-right of dialogue card
+    const skipW = 74;
     const skipH = 22;
-    const skipX = CARD_X + CARD_W - skipW / 2 - 4;
-    const skipY = CARD_Y - 12;
+    const skipX = cardX + cardW - skipW / 2 - 4;
+    const skipY = cardY - 12;
 
     const skipBg = this._track(
       this.scene.add
@@ -185,23 +235,24 @@ export class DialogueBox {
     });
     skipBg.on('pointerdown', (_pointer, _localX, _localY, event) => {
       event?.stopPropagation?.();
+      audioManager.playSfx('click');
       this._finish();
     });
 
-    // 5. Portrait frame (56x56) on the left of the card
+    // 5. Left portrait frame (72x72 centered vertically inside left of card)
     const portraitFrame = this._track(
       this.scene.add.graphics().setScrollFactor(0).setDepth(BASE_DEPTH + 2)
     );
-    const pLeft = PORTRAIT_X - PORTRAIT_SIZE / 2;
-    const pTop = PORTRAIT_Y - PORTRAIT_SIZE / 2;
+    const pLeft = portraitX - portraitSize / 2;
+    const pTop = portraitY - portraitSize / 2;
     portraitFrame.fillStyle(0x3b4f78, 1);
-    portraitFrame.fillRect(pLeft - 2, pTop - 2, PORTRAIT_SIZE + 4, PORTRAIT_SIZE + 4);
+    portraitFrame.fillRect(pLeft - 2, pTop - 2, portraitSize + 4, portraitSize + 4);
     portraitFrame.fillStyle(0x090e1a, 1);
-    portraitFrame.fillRect(pLeft, pTop, PORTRAIT_SIZE, PORTRAIT_SIZE);
+    portraitFrame.fillRect(pLeft, pTop, portraitSize, portraitSize);
 
     this._portraitFallbackBg = this._track(
       this.scene.add
-        .rectangle(PORTRAIT_X, PORTRAIT_Y, PORTRAIT_SIZE - 4, PORTRAIT_SIZE - 4, 0x1e293b)
+        .rectangle(portraitX, portraitY, portraitSize - 4, portraitSize - 4, 0x1e293b)
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH + 3)
         .setVisible(false)
@@ -209,9 +260,9 @@ export class DialogueBox {
 
     this._portraitFallbackTxt = this._track(
       this.scene.add
-        .text(PORTRAIT_X, PORTRAIT_Y, '?', {
+        .text(portraitX, portraitY, '?', {
           fontFamily: FONT,
-          fontSize: '24px',
+          fontSize: '28px',
           fontStyle: 'bold',
           color: '#f8fafc',
         })
@@ -224,26 +275,26 @@ export class DialogueBox {
     // 6. Dialogue body text (typewriter target)
     this._bodyText = this._track(
       this.scene.add
-        .text(CARD_X + 80, CARD_Y + 20, '', {
+        .text(bodyX, bodyY, '', {
           fontFamily: FONT,
-          fontSize: '12px',
+          fontSize: '13px',
           color: '#f1f5f9',
           lineSpacing: 5,
-          wordWrap: { width: CARD_W - 94, useAdvancedWrap: true },
+          wordWrap: { width: bodyWrapW, useAdvancedWrap: true },
         })
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH + 3)
     );
 
-    // 7. Line progress indicator under portrait
+    // 7. Line progress indicator at bottom-right (beside next cursor)
     this._progressText = this._track(
       this.scene.add
-        .text(PORTRAIT_X, PORTRAIT_Y + PORTRAIT_SIZE / 2 + 16, '', {
+        .text(cardX + cardW - 36, cardY + cardH - 16, '', {
           fontFamily: FONT,
-          fontSize: '9px',
+          fontSize: '10px',
           color: '#64748b',
         })
-        .setOrigin(0.5)
+        .setOrigin(1, 0.5)
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH + 3)
     );
@@ -251,7 +302,7 @@ export class DialogueBox {
     // 8. Blinking ▼ next-indicator at bottom-right of dialogue box
     this._cursorText = this._track(
       this.scene.add
-        .text(CARD_X + CARD_W - 18, CARD_Y + CARD_H - 18, '▼', {
+        .text(cardX + cardW - 18, cardY + cardH - 16, '▼', {
           fontFamily: FONT,
           fontSize: '12px',
           fontStyle: 'bold',
@@ -273,39 +324,42 @@ export class DialogueBox {
   }
 
   _drawCardFrame(accentColor) {
-    if (!this._cardGfx) return;
+    if (!this._cardGfx || !this._layout) return;
+    const { cardX, cardY, cardW, cardH } = this._layout;
     this._cardGfx.clear();
 
     // Subtle drop shadow
-    this._cardGfx.fillStyle(0x020617, 0.7);
-    this._cardGfx.fillRect(CARD_X + 3, CARD_Y + 4, CARD_W, CARD_H);
+    this._cardGfx.fillStyle(0x020617, 0.72);
+    this._cardGfx.fillRect(cardX + 3, cardY + 4, cardW, cardH);
 
     // Outer crisp pixel border
     this._cardGfx.fillStyle(accentColor, 1);
-    this._cardGfx.fillRect(CARD_X, CARD_Y, CARD_W, CARD_H);
+    this._cardGfx.fillRect(cardX, cardY, cardW, cardH);
 
     // Inner dark frame border
     this._cardGfx.fillStyle(0x1e293b, 1);
-    this._cardGfx.fillRect(CARD_X + 2, CARD_Y + 2, CARD_W - 4, CARD_H - 4);
+    this._cardGfx.fillRect(cardX + 2, cardY + 2, cardW - 4, cardH - 4);
 
     // Main slate body
     this._cardGfx.fillStyle(0x0f172a, 0.97);
-    this._cardGfx.fillRect(CARD_X + 4, CARD_Y + 4, CARD_W - 8, CARD_H - 8);
+    this._cardGfx.fillRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8);
 
     // Top rim highlight for semi-modern HD-2D feel
     this._cardGfx.fillStyle(0x94a3b8, 0.3);
-    this._cardGfx.fillRect(CARD_X + 4, CARD_Y + 4, CARD_W - 8, 2);
+    this._cardGfx.fillRect(cardX + 4, cardY + 4, cardW - 8, 2);
   }
 
   _drawSpeakerPill(speaker, theme) {
-    if (!this._speakerPillGfx || !this._speakerText) return;
+    if (!this._speakerPillGfx || !this._speakerText || !this._layout) return;
+    const { cardX, cardY, cardW } = this._layout;
     const label = String(speaker || 'Narrator').trim();
     this._speakerText.setText(label).setColor(theme.text);
 
-    const pillW = Math.max(76, Math.min(220, Math.ceil(this._speakerText.width) + 22));
+    const maxPillW = Math.max(120, cardW - 110);
+    const pillW = Math.max(88, Math.min(maxPillW, Math.ceil(this._speakerText.width) + 24));
     const pillH = 24;
-    const pillX = CARD_X + 8;
-    const pillY = CARD_Y - 24;
+    const pillX = cardX + 8;
+    const pillY = cardY - 24;
 
     this._speakerPillGfx.clear();
     // Outer pixel border
@@ -318,10 +372,13 @@ export class DialogueBox {
     this._speakerPillGfx.fillStyle(0xffffff, 0.16);
     this._speakerPillGfx.fillRect(pillX + 2, pillY + 2, pillW - 4, 2);
 
-    this._speakerText.setPosition(pillX + 11, pillY + pillH / 2);
+    this._speakerText.setPosition(pillX + 12, pillY + pillH / 2);
   }
 
   _updatePortrait(line, theme) {
+    if (!this._layout) return;
+    const { portraitX, portraitY, portraitSize } = this._layout;
+
     if (this._portraitImage) {
       this._portraitImage.destroy();
       this._portraitImage = null;
@@ -333,12 +390,13 @@ export class DialogueBox {
       this._portraitFallbackTxt.setVisible(false);
 
       const img = this.scene.add
-        .image(PORTRAIT_X, PORTRAIT_Y, key)
+        .image(portraitX, portraitY, key)
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH + 3);
 
-      const maxDim = PORTRAIT_SIZE - 4;
-      const scale = Math.min(maxDim / Math.max(1, img.width), maxDim / Math.max(1, img.height));
+      const maxDim = portraitSize - 4;
+      const fitScale = Math.min(maxDim / Math.max(1, img.width), maxDim / Math.max(1, img.height));
+      const scale = Math.min(PORTRAIT_TARGET_SCALE, fitScale);
       img.setScale(scale);
       this._portraitImage = img;
     } else {
@@ -374,6 +432,7 @@ export class DialogueBox {
 
     this._fullText = String(line.text ?? '');
     this._charIndex = 0;
+    this._blipCounter = 0;
     this._bodyText.setText('');
 
     if (this._fullText.length === 0) {
@@ -388,7 +447,16 @@ export class DialogueBox {
       callback: () => {
         if (!this._active) return;
         this._charIndex += 1;
+        const ch = this._fullText[this._charIndex - 1];
         this._bodyText.setText(this._fullText.slice(0, this._charIndex));
+
+        if (ch && !/\s/.test(ch)) {
+          this._blipCounter += 1;
+          if (this._blipCounter % BLIP_CHAR_INTERVAL === 1) {
+            audioManager.playSfx('click');
+          }
+        }
+
         if (this._charIndex >= this._fullText.length) {
           this._completeCurrentLine();
         }
@@ -420,6 +488,7 @@ export class DialogueBox {
       this._completeCurrentLine();
       return;
     }
+    audioManager.playSfx('click');
     this._showLine(this._lineIndex + 1);
   }
 
@@ -457,6 +526,7 @@ export class DialogueBox {
     this._cursorText = null;
     this._progressText = null;
     this._cardGfx = null;
+    this._layout = null;
 
     const resolve = this._resolve;
     this._resolve = null;

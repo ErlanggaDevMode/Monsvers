@@ -649,7 +649,7 @@ function createOrGetCanvasTexture(scene, key, width, height) {
 /**
  * Generates and registers all procedural pixel textures:
  * - 24 monster idle frames (12 monsters * 2 frames)
- * - 'bg_arena_solara' (360x360 pixel arena backdrop)
+ * - 'bg_arena_solara' (640x360 panoramic pixel arena backdrop)
  * - 'particle_pixel' (4x4)
  * - 'particle_spark' (6x6)
  * - 'icon_orb' (16x16 Rift Orb)
@@ -726,28 +726,31 @@ export function registerAllPixelTextures(scene) {
     }
   }
 
-  // 4. Battle Arena Parallax Pixel Backdrop (360x360)
+  // 4. Battle Arena Parallax Pixel Backdrop (640x360)
   if (!scene.textures.exists('bg_arena_solara')) {
-    const tex = createOrGetCanvasTexture(scene, 'bg_arena_solara', 360, 360);
+    const tex = createOrGetCanvasTexture(scene, 'bg_arena_solara', 640, 360);
     if (tex && tex.context) {
       const ctx = tex.context;
       ctx.imageSmoothingEnabled = false;
 
-      // Deep celestial night twilight sky gradient
+      // Deep celestial night twilight-to-emerald sky bands
       const skyGrad = ctx.createLinearGradient(0, 0, 0, 240);
-      skyGrad.addColorStop(0.0, '#060814');
-      skyGrad.addColorStop(0.3, '#0b1329');
-      skyGrad.addColorStop(0.65, '#1e1b4b');
-      skyGrad.addColorStop(0.85, '#2e1065');
-      skyGrad.addColorStop(1.0, '#1e293b');
+      skyGrad.addColorStop(0.0, '#040714');
+      skyGrad.addColorStop(0.25, '#0b1329');
+      skyGrad.addColorStop(0.55, '#0d2538');
+      skyGrad.addColorStop(0.8, '#0a352c');
+      skyGrad.addColorStop(1.0, '#0d2e22');
       ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, 360, 240);
+      ctx.fillRect(0, 0, 640, 240);
 
-      // Distant twinkling stars
+      // Distant twinkling stars across panoramic sky
       const starCoords = [
         [24, 18], [55, 34], [90, 14], [130, 42], [165, 22],
-        [210, 15], [260, 35], [305, 18], [335, 45], [40, 75],
-        [80, 88], [145, 70], [285, 78], [320, 92], [180, 52],
+        [210, 15], [260, 35], [305, 18], [335, 45], [380, 25],
+        [420, 16], [470, 38], [515, 20], [560, 32], [605, 18],
+        [40, 75], [80, 88], [145, 70], [285, 78], [320, 92],
+        [360, 68], [405, 82], [490, 74], [540, 88], [590, 64],
+        [180, 52], [450, 50], [620, 48],
       ];
       ctx.fillStyle = '#ffffff';
       for (const [sx, sy] of starCoords) {
@@ -756,34 +759,61 @@ export function registerAllPixelTextures(scene) {
       ctx.fillStyle = '#fef08a';
       ctx.fillRect(120, 28, 2, 2);
       ctx.fillRect(240, 22, 2, 2);
+      ctx.fillRect(480, 26, 2, 2);
+      ctx.fillRect(570, 40, 2, 2);
+      ctx.fillStyle = '#a7f3d0';
+      ctx.fillRect(195, 36, 2, 2);
+      ctx.fillRect(350, 30, 2, 2);
 
-      // Distant Eclipse Tower spire silhouette (center-right)
-      ctx.fillStyle = '#110e26';
-      ctx.fillRect(236, 40, 8, 140);
-      ctx.fillRect(232, 70, 16, 110);
-      ctx.fillRect(226, 110, 28, 70);
+      // Distant Eclipse Tower spire silhouette on horizon (center-right, x: 440)
+      ctx.fillStyle = '#0d0b1f';
+      ctx.fillRect(446, 32, 8, 148);
+      ctx.fillRect(442, 62, 16, 118);
+      ctx.fillRect(436, 102, 28, 78);
       ctx.fillStyle = '#9333ea';
-      ctx.fillRect(238, 48, 4, 12); // Spire rift glow
+      ctx.fillRect(448, 40, 4, 14); // Spire rift glow
+      ctx.fillStyle = '#c084fc';
+      ctx.fillRect(449, 42, 2, 8);
 
-      // Distant mountain ridge silhouette
-      ctx.fillStyle = '#0f172a';
+      // Distant mountain ridge silhouettes (layered panoramic depth)
+      ctx.fillStyle = '#0a1622';
       ctx.beginPath();
-      ctx.moveTo(0, 175);
-      ctx.lineTo(60, 140);
-      ctx.lineTo(120, 165);
-      ctx.lineTo(190, 130);
-      ctx.lineTo(260, 155);
-      ctx.lineTo(310, 138);
-      ctx.lineTo(360, 160);
-      ctx.lineTo(360, 240);
+      ctx.moveTo(0, 170);
+      ctx.lineTo(55, 135);
+      ctx.lineTo(110, 160);
+      ctx.lineTo(175, 128);
+      ctx.lineTo(240, 155);
+      ctx.lineTo(300, 132);
+      ctx.lineTo(370, 162);
+      ctx.lineTo(430, 125);
+      ctx.lineTo(500, 152);
+      ctx.lineTo(570, 130);
+      ctx.lineTo(640, 158);
+      ctx.lineTo(640, 240);
       ctx.lineTo(0, 240);
       ctx.closePath();
       ctx.fill();
 
-      // Pine forest canopy ridge
-      ctx.fillStyle = '#060d17';
-      for (let tx = 0; tx < 360; tx += 12) {
-        const treeHeight = 24 + ((tx * 7) % 18);
+      ctx.fillStyle = '#0b201f';
+      ctx.beginPath();
+      ctx.moveTo(0, 188);
+      ctx.lineTo(80, 155);
+      ctx.lineTo(150, 180);
+      ctx.lineTo(220, 150);
+      ctx.lineTo(310, 185);
+      ctx.lineTo(390, 152);
+      ctx.lineTo(470, 178);
+      ctx.lineTo(540, 148);
+      ctx.lineTo(640, 180);
+      ctx.lineTo(640, 240);
+      ctx.lineTo(0, 240);
+      ctx.closePath();
+      ctx.fill();
+
+      // Glowing Solara pine forest canopy ridge across 640
+      ctx.fillStyle = '#041612';
+      for (let tx = 0; tx < 640; tx += 12) {
+        const treeHeight = 24 + ((tx * 7) % 20);
         ctx.beginPath();
         ctx.moveTo(tx - 6, 220);
         ctx.lineTo(tx + 6, 220 - treeHeight);
@@ -791,80 +821,102 @@ export function registerAllPixelTextures(scene) {
         ctx.closePath();
         ctx.fill();
       }
+      ctx.fillStyle = '#06261c';
+      for (let tx = 6; tx < 640; tx += 16) {
+        const treeHeight = 18 + ((tx * 11) % 16);
+        ctx.beginPath();
+        ctx.moveTo(tx - 5, 220);
+        ctx.lineTo(tx + 5, 220 - treeHeight);
+        ctx.lineTo(tx + 15, 220);
+        ctx.closePath();
+        ctx.fill();
+      }
 
-      // Ground terrain base (deep mossy dark stone floor)
-      const groundGrad = ctx.createLinearGradient(0, 220, 0, 360);
-      groundGrad.addColorStop(0.0, '#0a101d');
-      groundGrad.addColorStop(0.4, '#0f172a');
-      groundGrad.addColorStop(1.0, '#060911');
+      // Ground terrain base (deep mossy dark stone floor & lush forest clearing)
+      const groundGrad = ctx.createLinearGradient(0, 215, 0, 360);
+      groundGrad.addColorStop(0.0, '#061712');
+      groundGrad.addColorStop(0.4, '#0c261e');
+      groundGrad.addColorStop(1.0, '#040d0a');
       ctx.fillStyle = groundGrad;
-      ctx.fillRect(0, 215, 360, 145);
+      ctx.fillRect(0, 215, 640, 145);
+
+      // Pixel moss tufts & stone textures across clearing
+      ctx.fillStyle = '#166534';
+      for (let gx = 10; gx < 630; gx += 28) {
+        const gy = 230 + ((gx * 13) % 100);
+        ctx.fillRect(gx, gy, 6, 2);
+        ctx.fillRect(gx + 2, gy - 2, 2, 2);
+      }
 
       // Glowing Solara forest particles (bioluminescent fireflies)
       const fireflies = [
-        [32, 175, '#38bdf8'], [85, 195, '#4ade80'], [150, 185, '#fde047'],
-        [205, 170, '#c084fc'], [290, 190, '#38bdf8'], [330, 165, '#bef264'],
-        [60, 225, '#4ade80'], [180, 215, '#fde047'], [310, 230, '#a855f7'],
-        [140, 250, '#38bdf8'], [240, 240, '#4ade80'], [20, 280, '#fde047'],
+        [32, 175, '#38bdf8'], [75, 195, '#4ade80'], [130, 185, '#fde047'],
+        [190, 170, '#c084fc'], [250, 190, '#38bdf8'], [310, 165, '#bef264'],
+        [360, 180, '#4ade80'], [410, 172, '#fde047'], [470, 188, '#38bdf8'],
+        [530, 168, '#c084fc'], [580, 192, '#bef264'], [620, 176, '#4ade80'],
+        [45, 245, '#4ade80'], [110, 275, '#fde047'], [175, 235, '#38bdf8'],
+        [235, 280, '#bef264'], [295, 255, '#c084fc'], [370, 265, '#4ade80'],
+        [440, 240, '#fde047'], [510, 285, '#38bdf8'], [575, 250, '#bef264'],
+        [615, 290, '#4ade80'],
       ];
       for (const [fx, fy, col] of fireflies) {
         ctx.fillStyle = col;
         ctx.fillRect(fx, fy, 2, 2);
       }
 
-      // Enemy Platform (Right-Top: center X=270, Y=175)
+      // Enemy Platform (Right-Top: center X=480, Y=175)
       // Soft shadow
       ctx.fillStyle = '#05070e';
       ctx.beginPath();
-      ctx.ellipse(270, 184, 62, 16, 0, 0, Math.PI * 2);
+      ctx.ellipse(480, 184, 66, 16, 0, 0, Math.PI * 2);
       ctx.fill();
       // Stone base layers
       ctx.fillStyle = '#1e293b';
       ctx.beginPath();
-      ctx.ellipse(270, 178, 58, 14, 0, 0, Math.PI * 2);
+      ctx.ellipse(480, 178, 62, 14, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#334155';
       ctx.beginPath();
-      ctx.ellipse(270, 174, 56, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(480, 174, 58, 12, 0, 0, Math.PI * 2);
       ctx.fill();
       // Top moss surface & rim highlight
       ctx.fillStyle = '#15803d';
       ctx.beginPath();
-      ctx.ellipse(270, 170, 54, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(480, 170, 54, 10, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#22c55e';
       ctx.beginPath();
-      ctx.ellipse(270, 168, 50, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(480, 168, 50, 7, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Player Platform (Left-Bottom: center X=95, Y=290)
+      // Player Platform (Left-Bottom: center X=169, Y=290)
       // Soft shadow
       ctx.fillStyle = '#03050a';
       ctx.beginPath();
-      ctx.ellipse(95, 302, 78, 20, 0, 0, Math.PI * 2);
+      ctx.ellipse(169, 302, 82, 20, 0, 0, Math.PI * 2);
       ctx.fill();
       // Ancient stone masonry base layers
       ctx.fillStyle = '#1e293b';
       ctx.beginPath();
-      ctx.ellipse(95, 294, 74, 17, 0, 0, Math.PI * 2);
+      ctx.ellipse(169, 294, 78, 17, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#334155';
       ctx.beginPath();
-      ctx.ellipse(95, 289, 71, 15, 0, 0, Math.PI * 2);
+      ctx.ellipse(169, 289, 74, 15, 0, 0, Math.PI * 2);
       ctx.fill();
       // Lush grassy moss battle surface
       ctx.fillStyle = '#16a34a';
       ctx.beginPath();
-      ctx.ellipse(95, 284, 68, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(169, 284, 70, 12, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#4ade80';
       ctx.beginPath();
-      ctx.ellipse(95, 282, 62, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(169, 282, 64, 8, 0, 0, Math.PI * 2);
       ctx.fill();
       // Runic glyph highlight in center of player platform
       ctx.fillStyle = '#bef264';
-      ctx.fillRect(92, 280, 6, 2);
-      ctx.fillRect(94, 278, 2, 6);
+      ctx.fillRect(166, 280, 6, 2);
+      ctx.fillRect(168, 278, 2, 6);
 
       if (typeof tex.refresh === 'function') tex.refresh();
     }

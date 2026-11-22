@@ -9,10 +9,10 @@
  *   4. portrait_warden (masked crimson Rift Warden)
  *   5. portrait_umbravex (glowing purple Eclipse Apex silhouette)
  *
- * - 3 Chapter Battle Arena Backdrops (360x360 pixel art):
- *   1. bg_arena_azure (turquoise ocean horizon, pixel waves, coastal cliffs, moonlit shimmer)
- *   2. bg_arena_ignis (volcanic sky, glowing lava fissures, basalt pillars, rising embers)
- *   3. bg_arena_eclipse (deep violet starfield, fractured Eclipse Rift portal, floating obsidian ruins)
+ * - 3 Chapter Battle Arena Backdrops (640x360 pixel art):
+ *   1. bg_arena_azure (wide moonlit turquoise bay, layered pixel ocean waves, coastal rock arches & lighthouse silhouette)
+ *   2. bg_arena_ignis (wide volcanic caldera, jagged basalt cliffs, glowing magma rivers & drifting ember ash)
+ *   3. bg_arena_eclipse (wide violet-indigo cosmos, colossal fractured Eclipse Rift portal glowing in the sky, floating obsidian ruins)
  */
 
 /**
@@ -231,82 +231,115 @@ const PORTRAIT_DEFINITIONS = {
 };
 
 // ============================================================================
-// Procedural Canvas Drawing Functions for 3 Chapter Arena Backdrops (360x360)
+// Procedural Canvas Drawing Functions for 3 Chapter Arena Backdrops (640x360)
 // ============================================================================
 
 /**
- * Chapter 2 — Teluk Azure Arena
- * Turquoise ocean horizon, pixel waves, coastal cliffs, moonlit shimmer
+ * Chapter 2 — Teluk Azure Arena (640x360)
+ * Wide moonlit turquoise bay, layered pixel ocean waves, coastal rock arches & lighthouse silhouette
  */
 function drawAzureArena(ctx) {
   ctx.imageSmoothingEnabled = false;
 
-  // 1. Twilight Oceanic Sky Gradient
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, 165);
-  skyGrad.addColorStop(0.0, '#02101e');
-  skyGrad.addColorStop(0.35, '#06293e');
-  skyGrad.addColorStop(0.7, '#0b4d6a');
-  skyGrad.addColorStop(1.0, '#15758f');
+  // 1. Twilight Oceanic Sky Gradient (width 640, height 170)
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, 170);
+  skyGrad.addColorStop(0.0, '#020e1c');
+  skyGrad.addColorStop(0.3, '#05273b');
+  skyGrad.addColorStop(0.65, '#0a4b69');
+  skyGrad.addColorStop(0.85, '#116e87');
+  skyGrad.addColorStop(1.0, '#1a8b9f');
   ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, 360, 165);
+  ctx.fillRect(0, 0, 640, 170);
 
-  // 2. Crescent Moon (Center-Left: 70, 50)
+  // 2. Crescent Moon (Center-Left: 130, 48)
   ctx.fillStyle = '#bae6fd';
   ctx.beginPath();
-  ctx.arc(70, 48, 18, 0, Math.PI * 2);
+  ctx.arc(130, 48, 20, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(68, 46, 15, 0, Math.PI * 2);
+  ctx.arc(128, 46, 17, 0, Math.PI * 2);
   ctx.fill();
   // Crescent shadow cutout
-  ctx.fillStyle = '#06293e';
+  ctx.fillStyle = '#05273b';
   ctx.beginPath();
-  ctx.arc(77, 43, 16, 0, Math.PI * 2);
+  ctx.arc(138, 43, 18, 0, Math.PI * 2);
   ctx.fill();
 
-  // Distant stars
+  // Distant stars across 640 width
   const stars = [
-    [24, 20], [130, 25], [175, 18], [220, 32], [270, 15], [315, 28], [340, 42],
-    [105, 65], [160, 55], [290, 60], [240, 75], [330, 80],
+    [24, 20], [65, 30], [105, 18], [175, 25], [220, 32], [270, 15],
+    [315, 28], [360, 16], [410, 35], [455, 22], [505, 18], [545, 30],
+    [590, 20], [625, 36], [40, 65], [180, 70], [250, 60], [330, 75],
+    [395, 62], [470, 80], [530, 65], [605, 72],
   ];
   ctx.fillStyle = '#e0f2fe';
   for (const [sx, sy] of stars) {
     ctx.fillRect(sx, sy, 2, 2);
   }
 
-  // 3. Moonlit Shimmer on Sea
+  // 3. Moonlit Shimmer on Sea below Crescent Moon
   ctx.fillStyle = '#7dd3fc';
   for (let y = 162; y < 225; y += 4) {
-    const spread = (y - 160) * 1.4;
-    const shimmerX = 70 + ((y * 13) % 24) - 12;
+    const spread = (y - 158) * 1.5;
+    const shimmerX = 130 + ((y * 13) % 24) - 12;
     ctx.fillRect(shimmerX - spread / 2, y, spread, 2);
   }
 
-  // 4. Distant Coastal Sea Stacks & Cliffs Silhouette
-  ctx.fillStyle = '#0a2336';
+  // 4. Distant Coastal Rock Arches & Sea Stacks & Lighthouse Silhouette
+  // Distant headland & sea stacks
+  ctx.fillStyle = '#081d2d';
   ctx.beginPath();
   ctx.moveTo(0, 165);
   ctx.lineTo(40, 138);
   ctx.lineTo(85, 154);
-  ctx.lineTo(135, 126);
-  ctx.lineTo(190, 150);
-  ctx.lineTo(240, 134);
-  ctx.lineTo(290, 155);
-  ctx.lineTo(330, 130);
-  ctx.lineTo(360, 148);
-  ctx.lineTo(360, 170);
-  ctx.lineTo(0, 170);
+  ctx.lineTo(135, 128);
+  ctx.lineTo(180, 150);
+  ctx.lineTo(210, 125);
+  // Natural Coastal Rock Arch (X: 210..270)
+  ctx.lineTo(270, 125);
+  ctx.lineTo(290, 152);
+  ctx.lineTo(340, 132);
+  ctx.lineTo(390, 155);
+  ctx.lineTo(440, 136);
+  ctx.lineTo(500, 150);
+  ctx.lineTo(540, 120);
+  // Lighthouse Headland (X: 540..640)
+  ctx.lineTo(580, 115);
+  ctx.lineTo(640, 138);
+  ctx.lineTo(640, 172);
+  ctx.lineTo(0, 172);
   ctx.closePath();
   ctx.fill();
 
-  // 5. Ocean Water & Pixel Waves (y: 160..225)
-  const oceanGrad = ctx.createLinearGradient(0, 160, 0, 225);
-  oceanGrad.addColorStop(0.0, '#0369a1');
+  // Coastal Rock Arch Opening cutout (hole showing sea/moonlight)
+  ctx.fillStyle = '#106e87';
+  ctx.beginPath();
+  ctx.ellipse(240, 148, 16, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lighthouse silhouette atop headland (X: 575)
+  ctx.fillStyle = '#05131f';
+  ctx.fillRect(572, 85, 8, 30); // Tower shaft
+  ctx.fillRect(570, 80, 12, 6);  // Lantern room
+  ctx.fillStyle = '#fef08a';
+  ctx.fillRect(572, 81, 8, 4);   // Luminous beacon lamp
+  // Beacon beam light cone across the bay
+  ctx.fillStyle = 'rgba(254, 240, 138, 0.15)';
+  ctx.beginPath();
+  ctx.moveTo(570, 83);
+  ctx.lineTo(420, 115);
+  ctx.lineTo(430, 145);
+  ctx.closePath();
+  ctx.fill();
+
+  // 5. Ocean Water & Layered Pixel Ocean Waves (y: 165..225 across 640 width)
+  const oceanGrad = ctx.createLinearGradient(0, 165, 0, 225);
+  oceanGrad.addColorStop(0.0, '#035380');
   oceanGrad.addColorStop(0.5, '#0284c7');
   oceanGrad.addColorStop(1.0, '#0ea5e9');
   ctx.fillStyle = oceanGrad;
-  ctx.fillRect(0, 165, 360, 60);
+  ctx.fillRect(0, 165, 640, 60);
 
   // Stepped Pixel Waves & Seafoam Crests
   const waveLayers = [
@@ -318,7 +351,7 @@ function drawAzureArena(ctx) {
   ];
   for (const wave of waveLayers) {
     ctx.fillStyle = wave.color;
-    for (let wx = 0; wx < 360; wx += 24) {
+    for (let wx = 0; wx < 640; wx += 24) {
       const offset = (wx * 7) % 6;
       ctx.fillRect(wx, wave.y + offset, 16, 3);
       ctx.fillStyle = wave.foam;
@@ -327,163 +360,182 @@ function drawAzureArena(ctx) {
     }
   }
 
-  // 6. Coastal Bedrock & Sandy Shelf Ground (y: 215..360)
+  // 6. Coastal Bedrock & Sandy Shelf Ground (y: 215..360, width 640)
   const groundGrad = ctx.createLinearGradient(0, 215, 0, 360);
   groundGrad.addColorStop(0.0, '#062030');
   groundGrad.addColorStop(0.4, '#082b40');
   groundGrad.addColorStop(1.0, '#03131c');
   ctx.fillStyle = groundGrad;
-  ctx.fillRect(0, 215, 360, 145);
+  ctx.fillRect(0, 215, 640, 145);
 
-  // Coastal Bioluminescent Plankton
+  // Coastal Bioluminescent Plankton across 640 width
   const plankton = [
     [25, 230, '#38bdf8'], [75, 250, '#2dd4bf'], [135, 240, '#a7f3d0'],
     [195, 225, '#38bdf8'], [250, 245, '#67e8f9'], [310, 235, '#2dd4bf'],
-    [40, 280, '#2dd4bf'], [150, 275, '#38bdf8'], [230, 270, '#bae6fd'],
-    [290, 290, '#2dd4bf'], [80, 320, '#67e8f9'], [200, 315, '#38bdf8'],
+    [370, 250, '#38bdf8'], [430, 230, '#a7f3d0'], [490, 245, '#67e8f9'],
+    [550, 235, '#2dd4bf'], [610, 240, '#38bdf8'], [40, 280, '#2dd4bf'],
+    [150, 275, '#38bdf8'], [230, 270, '#bae6fd'], [290, 290, '#2dd4bf'],
+    [380, 280, '#38bdf8'], [450, 275, '#67e8f9'], [520, 285, '#2dd4bf'],
+    [590, 275, '#bae6fd'], [80, 320, '#67e8f9'], [200, 315, '#38bdf8'],
+    [350, 325, '#2dd4bf'], [480, 320, '#38bdf8'], [570, 330, '#67e8f9'],
   ];
   for (const [px, py, pcol] of plankton) {
     ctx.fillStyle = pcol;
     ctx.fillRect(px, py, 2, 2);
   }
 
-  // 7. Enemy Platform (Right-Top: center X=270, Y=175)
+  // 7. Enemy Platform (Right-Top: center X=480, Y=175)
   // Soft shadow
   ctx.fillStyle = '#020b12';
   ctx.beginPath();
-  ctx.ellipse(270, 184, 62, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 184, 70, 17, 0, 0, Math.PI * 2);
   ctx.fill();
   // Basalt foundation
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
-  ctx.ellipse(270, 178, 58, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 178, 65, 15, 0, 0, Math.PI * 2);
   ctx.fill();
   // Marine stone disk
   ctx.fillStyle = '#0369a1';
   ctx.beginPath();
-  ctx.ellipse(270, 174, 55, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 174, 61, 13, 0, 0, Math.PI * 2);
   ctx.fill();
   // Turquoise coral reef battle surface
   ctx.fillStyle = '#0284c7';
   ctx.beginPath();
-  ctx.ellipse(270, 170, 52, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 170, 57, 11, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#38bdf8';
   ctx.beginPath();
-  ctx.ellipse(270, 168, 48, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 168, 51, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // 8. Player Platform (Left-Bottom: center X=95, Y=290)
+  // 8. Player Platform (Left-Bottom: center X=170, Y=288)
   // Soft shadow
   ctx.fillStyle = '#020b12';
   ctx.beginPath();
-  ctx.ellipse(95, 302, 78, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 302, 86, 21, 0, 0, Math.PI * 2);
   ctx.fill();
   // Ancient tide-temple masonry base
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
-  ctx.ellipse(95, 294, 74, 17, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 294, 80, 18, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#0369a1';
   ctx.beginPath();
-  ctx.ellipse(95, 289, 70, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 289, 76, 15, 0, 0, Math.PI * 2);
   ctx.fill();
   // Azure marble battle disk
   ctx.fillStyle = '#0284c7';
   ctx.beginPath();
-  ctx.ellipse(95, 284, 66, 11, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 284, 72, 12, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#38bdf8';
   ctx.beginPath();
-  ctx.ellipse(95, 282, 60, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 282, 65, 9, 0, 0, Math.PI * 2);
   ctx.fill();
   // Center tidal glyph
   ctx.fillStyle = '#e0f2fe';
-  ctx.fillRect(92, 280, 6, 2);
-  ctx.fillRect(94, 278, 2, 6);
+  ctx.fillRect(167, 280, 6, 2);
+  ctx.fillRect(169, 278, 2, 6);
 }
 
 /**
- * Chapter 3 — Kawah Ignis Arena
- * Volcanic sky, glowing lava fissures, basalt pillars, rising embers
+ * Chapter 3 — Kawah Ignis Arena (640x360)
+ * Wide volcanic caldera, jagged basalt cliffs, glowing magma rivers & drifting ember ash
  */
 function drawIgnisArena(ctx) {
   ctx.imageSmoothingEnabled = false;
 
-  // 1. Dark Volcanic Ash & Smoke Sky Gradient
+  // 1. Dark Volcanic Ash & Smoke Sky Gradient (width 640, height 175)
   const skyGrad = ctx.createLinearGradient(0, 0, 0, 175);
-  skyGrad.addColorStop(0.0, '#130304');
-  skyGrad.addColorStop(0.35, '#2e0809');
-  skyGrad.addColorStop(0.7, '#62110a');
+  skyGrad.addColorStop(0.0, '#120204');
+  skyGrad.addColorStop(0.3, '#2a0608');
+  skyGrad.addColorStop(0.65, '#5c0f0a');
+  skyGrad.addColorStop(0.85, '#8c140d');
   skyGrad.addColorStop(1.0, '#b91c1c');
   ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, 360, 175);
+  ctx.fillRect(0, 0, 640, 175);
 
-  // 2. Distant Caldera Volcano Crater Silhouette
-  ctx.fillStyle = '#22080a';
+  // 2. Wide Volcanic Caldera & Jagged Cliffs Silhouette (width 640)
+  ctx.fillStyle = '#200709';
   ctx.beginPath();
   ctx.moveTo(0, 175);
   ctx.lineTo(50, 130);
   ctx.lineTo(110, 155);
-  ctx.lineTo(170, 105); // Caldera peak
-  ctx.lineTo(210, 115);
-  ctx.lineTo(270, 95);  // Main smoking cone
-  ctx.lineTo(320, 140);
-  ctx.lineTo(360, 130);
-  ctx.lineTo(360, 180);
-  ctx.lineTo(0, 180);
+  ctx.lineTo(170, 105); // West caldera ridge
+  ctx.lineTo(220, 120);
+  ctx.lineTo(280, 90);  // Center-west caldera cone
+  ctx.lineTo(340, 135);
+  ctx.lineTo(410, 95);  // Central eruption peak
+  ctx.lineTo(470, 125);
+  ctx.lineTo(530, 85);  // East smoking caldera cone
+  ctx.lineTo(590, 140);
+  ctx.lineTo(640, 125);
+  ctx.lineTo(640, 185);
+  ctx.lineTo(0, 185);
   ctx.closePath();
   ctx.fill();
 
-  // Glowing Lava Cascades from Caldera Peak
-  ctx.fillStyle = '#f97316';
-  ctx.fillRect(268, 100, 5, 45);
-  ctx.fillRect(168, 110, 4, 35);
-  ctx.fillStyle = '#fde047';
-  ctx.fillRect(269, 105, 3, 30);
-  ctx.fillRect(169, 114, 2, 20);
+  // Glowing Lava Cascades from Caldera Peaks
+  const lavaFalls = [
+    [168, 110, 4, 38],
+    [278, 95, 5, 45],
+    [408, 100, 5, 48],
+    [528, 90, 5, 50],
+  ];
+  for (const [lx, ly, lw, lh] of lavaFalls) {
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(lx, ly, lw, lh);
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(lx + 1, ly + 4, Math.max(1, lw - 2), lh - 10);
+  }
 
-  // 3. Basalt Hexagonal Columns (Left & Right framing)
+  // 3. Jagged Basalt Hexagonal Columns (Left & Right colonnades)
   ctx.fillStyle = '#1c1917';
-  for (let bx = 0; bx < 60; bx += 10) {
+  // Left basalt colonnade (X: 0..80)
+  for (let bx = 0; bx < 80; bx += 10) {
     const colH = 35 + ((bx * 13) % 25);
     ctx.fillRect(bx, 180 - colH, 9, colH + 20);
     ctx.fillStyle = '#292524';
     ctx.fillRect(bx + 1, 180 - colH, 7, 2);
     ctx.fillStyle = '#1c1917';
   }
-  for (let bx = 300; bx < 360; bx += 10) {
-    const colH = 40 + ((bx * 17) % 25);
+  // Right basalt colonnade (X: 560..640)
+  for (let bx = 560; bx < 640; bx += 10) {
+    const colH = 38 + ((bx * 17) % 25);
     ctx.fillRect(bx, 180 - colH, 9, colH + 20);
     ctx.fillStyle = '#292524';
     ctx.fillRect(bx + 1, 180 - colH, 7, 2);
     ctx.fillStyle = '#1c1917';
   }
 
-  // 4. Caldera Basalt Floor Base (y: 175..360)
+  // 4. Caldera Basalt Floor Base (y: 175..360, width 640)
   const floorGrad = ctx.createLinearGradient(0, 175, 0, 360);
   floorGrad.addColorStop(0.0, '#1c1012');
   floorGrad.addColorStop(0.4, '#241416');
   floorGrad.addColorStop(1.0, '#0e0506');
   ctx.fillStyle = floorGrad;
-  ctx.fillRect(0, 175, 360, 185);
+  ctx.fillRect(0, 175, 640, 185);
 
-  // 5. Glowing Lava Fissures across the floor
+  // 5. Glowing Magma Rivers across the floor
   const fissures = [
-    // Fissure 1 (Horizontal jagged branch)
-    [[0, 245], [45, 240], [90, 248], [150, 242], [220, 252], [290, 246], [360, 250]],
-    // Fissure 2 (Diagonal branch)
-    [[60, 275], [120, 285], [180, 278], [240, 290], [310, 282]],
+    // Magma River 1 (Main jagged river across floor)
+    [[0, 245], [55, 238], [120, 248], [195, 240], [280, 252], [370, 244], [460, 254], [550, 246], [640, 252]],
+    // Magma River 2 (Lower branching river)
+    [[70, 275], [150, 285], [230, 276], [320, 290], [420, 280], [510, 292], [600, 284]],
+    // Magma River 3 (Forefront tributary)
+    [[140, 320], [260, 335], [380, 325], [490, 338]],
   ];
   for (const line of fissures) {
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeStyle = '#991b1b';
     ctx.beginPath();
     ctx.moveTo(line[0][0], line[0][1]);
     for (let i = 1; i < line.length; i++) ctx.lineTo(line[i][0], line[i][1]);
     ctx.stroke();
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.strokeStyle = '#f97316';
     ctx.beginPath();
     ctx.moveTo(line[0][0], line[0][1]);
@@ -498,97 +550,105 @@ function drawIgnisArena(ctx) {
     ctx.stroke();
   }
 
-  // 6. Rising Fiery Embers
+  // 6. Drifting Ember Ash rising across panoramic sky
   const embers = [
     [35, 60, '#fef08a'], [80, 45, '#f97316'], [140, 70, '#ef4444'],
     [195, 40, '#fef08a'], [245, 55, '#f97316'], [285, 35, '#ef4444'],
-    [330, 65, '#fef08a'], [60, 115, '#f97316'], [120, 105, '#fef08a'],
-    [210, 95, '#ef4444'], [265, 85, '#fef08a'], [315, 120, '#f97316'],
-    [45, 195, '#fef08a'], [160, 210, '#f97316'], [280, 205, '#ef4444'],
+    [330, 65, '#fef08a'], [380, 45, '#f97316'], [430, 75, '#ef4444'],
+    [485, 35, '#fef08a'], [535, 60, '#f97316'], [580, 40, '#ef4444'],
+    [620, 70, '#fef08a'], [60, 115, '#f97316'], [120, 105, '#fef08a'],
+    [210, 95, '#ef4444'], [265, 85, '#fef08a'], [350, 110, '#f97316'],
+    [415, 95, '#fef08a'], [475, 115, '#ef4444'], [545, 90, '#fef08a'],
+    [605, 120, '#f97316'], [45, 195, '#fef08a'], [160, 210, '#f97316'],
+    [280, 205, '#ef4444'], [390, 215, '#fef08a'], [510, 200, '#f97316'],
+    [615, 210, '#ef4444'],
   ];
   for (const [ex, ey, ecol] of embers) {
     ctx.fillStyle = ecol;
     ctx.fillRect(ex, ey, 2, 2);
   }
 
-  // 7. Enemy Platform (Right-Top: center X=270, Y=175)
+  // 7. Enemy Platform (Right-Top: center X=480, Y=175)
   // Soft shadow
   ctx.fillStyle = '#080203';
   ctx.beginPath();
-  ctx.ellipse(270, 184, 62, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 184, 70, 17, 0, 0, Math.PI * 2);
   ctx.fill();
   // Basalt foundation
   ctx.fillStyle = '#1c1917';
   ctx.beginPath();
-  ctx.ellipse(270, 178, 58, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 178, 65, 15, 0, 0, Math.PI * 2);
   ctx.fill();
   // Magma rim
   ctx.fillStyle = '#991b1b';
   ctx.beginPath();
-  ctx.ellipse(270, 174, 55, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 174, 61, 13, 0, 0, Math.PI * 2);
   ctx.fill();
   // Obsidian volcanic battle plate
   ctx.fillStyle = '#292524';
   ctx.beginPath();
-  ctx.ellipse(270, 170, 52, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 170, 57, 11, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#ea580c';
   ctx.beginPath();
-  ctx.ellipse(270, 168, 48, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 168, 51, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // 8. Player Platform (Left-Bottom: center X=95, Y=290)
+  // 8. Player Platform (Left-Bottom: center X=170, Y=288)
   // Soft shadow
   ctx.fillStyle = '#060102';
   ctx.beginPath();
-  ctx.ellipse(95, 302, 78, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 302, 86, 21, 0, 0, Math.PI * 2);
   ctx.fill();
   // Hexagonal basalt base
   ctx.fillStyle = '#1c1917';
   ctx.beginPath();
-  ctx.ellipse(95, 294, 74, 17, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 294, 80, 18, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#991b1b';
   ctx.beginPath();
-  ctx.ellipse(95, 289, 70, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 289, 76, 15, 0, 0, Math.PI * 2);
   ctx.fill();
   // Obsidian volcanic battle plate
   ctx.fillStyle = '#292524';
   ctx.beginPath();
-  ctx.ellipse(95, 284, 66, 11, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 284, 72, 12, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#ea580c';
   ctx.beginPath();
-  ctx.ellipse(95, 282, 60, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 282, 65, 9, 0, 0, Math.PI * 2);
   ctx.fill();
   // Center incandescent flame glyph
   ctx.fillStyle = '#fef08a';
-  ctx.fillRect(92, 280, 6, 2);
-  ctx.fillRect(94, 278, 2, 6);
+  ctx.fillRect(167, 280, 6, 2);
+  ctx.fillRect(169, 278, 2, 6);
 }
 
 /**
- * Chapter 4 — Menara Eclipse Arena
- * Deep violet starfield, fractured Eclipse Rift portal, floating obsidian ruins
+ * Chapter 4 — Menara Eclipse Arena (640x360)
+ * Wide violet-indigo cosmos, colossal fractured Eclipse Rift portal glowing in the sky, floating obsidian ruins
  */
 function drawEclipseArena(ctx) {
   ctx.imageSmoothingEnabled = false;
 
-  // 1. Deep Cosmic Void Sky Gradient
+  // 1. Deep Cosmic Void Sky Gradient (width 640, height 210)
   const skyGrad = ctx.createLinearGradient(0, 0, 0, 210);
-  skyGrad.addColorStop(0.0, '#030008');
-  skyGrad.addColorStop(0.3, '#0e021c');
-  skyGrad.addColorStop(0.65, '#22063d');
+  skyGrad.addColorStop(0.0, '#020006');
+  skyGrad.addColorStop(0.25, '#0b0216');
+  skyGrad.addColorStop(0.6, '#1f0537');
   skyGrad.addColorStop(0.85, '#3b0764');
-  skyGrad.addColorStop(1.0, '#19042b');
+  skyGrad.addColorStop(1.0, '#170327');
   ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, 360, 210);
+  ctx.fillRect(0, 0, 640, 210);
 
-  // 2. Cosmic Void Starfield
+  // 2. Cosmic Void Starfield across 640 width
   const voidStars = [
     [15, 18], [42, 35], [85, 22], [120, 48], [155, 16], [215, 30],
-    [260, 18], [295, 45], [335, 25], [35, 75], [90, 85], [245, 80],
-    [320, 95], [60, 130], [280, 140], [330, 155], [25, 170],
+    [260, 18], [295, 45], [345, 20], [390, 42], [435, 16], [480, 34],
+    [525, 22], [570, 46], [610, 18], [35, 75], [90, 85], [160, 95],
+    [245, 80], [380, 90], [450, 78], [515, 88], [585, 76], [625, 92],
+    [60, 130], [280, 140], [360, 135], [490, 145], [560, 130], [620, 155],
+    [25, 170], [530, 175], [600, 180],
   ];
   ctx.fillStyle = '#ffffff';
   for (const [vx, vy] of voidStars) {
@@ -597,40 +657,45 @@ function drawEclipseArena(ctx) {
   ctx.fillStyle = '#c084fc';
   ctx.fillRect(110, 32, 2, 2);
   ctx.fillRect(250, 40, 2, 2);
+  ctx.fillRect(390, 28, 2, 2);
+  ctx.fillRect(520, 38, 2, 2);
   ctx.fillRect(70, 90, 2, 2);
+  ctx.fillRect(470, 92, 2, 2);
 
-  // 3. Fractured Eclipse Rift Portal (Center Sky: 180, 72)
+  // 3. Colossal Fractured Eclipse Rift Portal (Center Sky: 320, 75)
   // Outer coronal flare
-  ctx.fillStyle = '#581c87';
+  ctx.fillStyle = '#4c1d95';
   ctx.beginPath();
-  ctx.ellipse(180, 72, 54, 38, 0, 0, Math.PI * 2);
+  ctx.ellipse(320, 75, 96, 52, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7e22ce';
+  ctx.fillStyle = '#6b21a8';
   ctx.beginPath();
-  ctx.ellipse(180, 72, 44, 30, 0, 0, Math.PI * 2);
+  ctx.ellipse(320, 75, 78, 40, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#a855f7';
+  ctx.fillStyle = '#8b5cf6';
   ctx.beginPath();
-  ctx.ellipse(180, 72, 34, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(320, 75, 60, 30, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#c084fc';
   ctx.beginPath();
-  ctx.ellipse(180, 72, 24, 15, 0, 0, Math.PI * 2);
+  ctx.ellipse(320, 75, 42, 20, 0, 0, Math.PI * 2);
   ctx.fill();
   // Black Hole Singularity Void Core
   ctx.fillStyle = '#000000';
   ctx.beginPath();
-  ctx.ellipse(180, 72, 16, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(320, 75, 26, 12, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Spacetime Fracture Lightning Tendrils
-  ctx.strokeStyle = '#e9d5ff';
+  // Spacetime Fracture Lightning Tendrils branching across cosmic void
+  ctx.strokeStyle = '#f3e8ff';
   ctx.lineWidth = 1;
   const tendrils = [
-    [[164, 72], [140, 60], [115, 68], [90, 52]],
-    [[196, 72], [220, 62], [245, 70], [275, 55]],
-    [[180, 62], [185, 42], [178, 25], [182, 10]],
-    [[180, 82], [175, 102], [182, 120]],
+    [[294, 75], [260, 60], [215, 68], [170, 50], [130, 62]],
+    [[346, 75], [380, 62], [425, 70], [470, 52], [510, 65]],
+    [[320, 63], [328, 40], [318, 22], [324, 8]],
+    [[320, 87], [312, 110], [325, 130]],
+    [[302, 68], [275, 45], [240, 35]],
+    [[338, 68], [365, 45], [400, 32]],
   ];
   for (const t of tendrils) {
     ctx.beginPath();
@@ -639,10 +704,11 @@ function drawEclipseArena(ctx) {
     ctx.stroke();
   }
 
-  // 4. Weightless Floating Obsidian Ruins in Midground
+  // 4. Weightless Floating Obsidian Ruins in Midground (across 640 width)
   const ruins = [
-    [40, 120, 22, 14], [85, 140, 16, 20], [130, 155, 26, 12],
-    [230, 135, 24, 16], [290, 115, 30, 18], [325, 145, 18, 22],
+    [40, 120, 24, 15], [95, 142, 18, 22], [150, 155, 28, 14],
+    [220, 135, 26, 18], [420, 135, 26, 18], [480, 115, 32, 18],
+    [540, 145, 20, 24], [590, 125, 24, 16],
   ];
   for (const [rx, ry, rw, rh] of ruins) {
     ctx.fillStyle = '#0f071f';
@@ -653,80 +719,84 @@ function drawEclipseArena(ctx) {
     ctx.fillRect(rx + rw / 2 - 1, ry + rh / 2 - 1, 2, 2); // Core rift rune
   }
 
-  // 5. Cosmic Abyss Floor Base (y: 205..360)
+  // 5. Cosmic Abyss Floor Base (y: 205..360, width 640)
   const floorGrad = ctx.createLinearGradient(0, 205, 0, 360);
   floorGrad.addColorStop(0.0, '#090214');
   floorGrad.addColorStop(0.4, '#15062a');
   floorGrad.addColorStop(1.0, '#04010a');
   ctx.fillStyle = floorGrad;
-  ctx.fillRect(0, 205, 360, 155);
+  ctx.fillRect(0, 205, 640, 155);
 
-  // Floating Cosmic Void Motes
+  // Floating Cosmic Void Motes across 640 width
   const motes = [
     [28, 225, '#c084fc'], [82, 245, '#e9d5ff'], [145, 235, '#38bdf8'],
-    [205, 220, '#a855f7'], [265, 240, '#c084fc'], [320, 230, '#e9d5ff'],
-    [45, 275, '#a855f7'], [165, 265, '#c084fc'], [240, 280, '#38bdf8'],
-    [305, 295, '#e9d5ff'], [95, 320, '#c084fc'], [225, 315, '#a855f7'],
+    [205, 220, '#a855f7'], [265, 240, '#c084fc'], [330, 225, '#e9d5ff'],
+    [390, 245, '#38bdf8'], [450, 220, '#a855f7'], [510, 240, '#c084fc'],
+    [570, 230, '#e9d5ff'], [620, 245, '#38bdf8'], [45, 275, '#a855f7'],
+    [165, 265, '#c084fc'], [240, 280, '#38bdf8'], [320, 270, '#e9d5ff'],
+    [400, 285, '#a855f7'], [480, 265, '#c084fc'], [550, 280, '#38bdf8'],
+    [605, 295, '#e9d5ff'], [95, 320, '#c084fc'], [225, 315, '#a855f7'],
+    [360, 325, '#38bdf8'], [490, 315, '#c084fc'], [580, 330, '#a855f7'],
   ];
   for (const [mx, my, mcol] of motes) {
     ctx.fillStyle = mcol;
     ctx.fillRect(mx, my, 2, 2);
   }
 
-  // 6. Enemy Platform (Right-Top: center X=270, Y=175)
+  // 6. Enemy Platform (Right-Top: center X=480, Y=175)
   // Soft void shadow
   ctx.fillStyle = '#020005';
   ctx.beginPath();
-  ctx.ellipse(270, 184, 62, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 184, 70, 17, 0, 0, Math.PI * 2);
   ctx.fill();
   // Obsidian ruin foundation
   ctx.fillStyle = '#1e0836';
   ctx.beginPath();
-  ctx.ellipse(270, 178, 58, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 178, 65, 15, 0, 0, Math.PI * 2);
   ctx.fill();
   // Arcane rift rim
   ctx.fillStyle = '#6b21a8';
   ctx.beginPath();
-  ctx.ellipse(270, 174, 55, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 174, 61, 13, 0, 0, Math.PI * 2);
   ctx.fill();
   // Void crystal battle surface
   ctx.fillStyle = '#3b0764';
   ctx.beginPath();
-  ctx.ellipse(270, 170, 52, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 170, 57, 11, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#a855f7';
   ctx.beginPath();
-  ctx.ellipse(270, 168, 48, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(480, 168, 51, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // 7. Player Platform (Left-Bottom: center X=95, Y=290)
+  // 7. Player Platform (Left-Bottom: center X=170, Y=288)
   // Soft void shadow
   ctx.fillStyle = '#020005';
   ctx.beginPath();
-  ctx.ellipse(95, 302, 78, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 302, 86, 21, 0, 0, Math.PI * 2);
   ctx.fill();
   // Ancient sanctuary dias masonry
   ctx.fillStyle = '#1e0836';
   ctx.beginPath();
-  ctx.ellipse(95, 294, 74, 17, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 294, 80, 18, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#6b21a8';
   ctx.beginPath();
-  ctx.ellipse(95, 289, 70, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 289, 76, 15, 0, 0, Math.PI * 2);
   ctx.fill();
   // Astral purple battle plate
   ctx.fillStyle = '#4c1d95';
   ctx.beginPath();
-  ctx.ellipse(95, 284, 66, 11, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 284, 72, 12, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#a855f7';
   ctx.beginPath();
-  ctx.ellipse(95, 282, 60, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(170, 282, 65, 9, 0, 0, Math.PI * 2);
   ctx.fill();
   // Center celestial seal glyph
   ctx.fillStyle = '#f3e8ff';
-  ctx.fillRect(92, 280, 6, 2);
-  ctx.fillRect(94, 278, 2, 6);
+  ctx.fillRect(167, 280, 6, 2);
+  ctx.fillRect(169, 278, 2, 6);
 }
 
 // ============================================================================
@@ -736,7 +806,7 @@ function drawEclipseArena(ctx) {
 /**
  * Registers all story campaign pixel textures:
  * - 5 Character Portraits (48x48)
- * - 3 Chapter Battle Arena Backdrops (360x360)
+ * - 3 Chapter Battle Arena Backdrops (640x360)
  *
  * Idempotent: Skips any texture that already exists in scene.textures.
  *
@@ -789,7 +859,7 @@ export function registerStoryTextures(scene) {
   }
 
   // --------------------------------------------------------------------------
-  // 2. Chapter Battle Arena Backdrops (360x360)
+  // 2. Chapter Battle Arena Backdrops (640x360)
   // --------------------------------------------------------------------------
   const arenaBackdrops = [
     { key: 'bg_arena_azure', draw: drawAzureArena, fallbackColor: 0x0284c7 },
@@ -800,7 +870,7 @@ export function registerStoryTextures(scene) {
   for (const arena of arenaBackdrops) {
     if (scene.textures.exists(arena.key)) continue;
 
-    const tex = createOrGetCanvasTexture(scene, arena.key, 360, 360);
+    const tex = createOrGetCanvasTexture(scene, arena.key, 640, 360);
     if (tex && tex.context) {
       arena.draw(tex.context);
       if (typeof tex.refresh === 'function') {
@@ -810,8 +880,8 @@ export function registerStoryTextures(scene) {
       // Graphics fallback
       const g = scene.make.graphics({ x: 0, y: 0, add: false });
       g.fillStyle(arena.fallbackColor, 1);
-      g.fillRect(0, 0, 360, 360);
-      g.generateTexture(arena.key, 360, 360);
+      g.fillRect(0, 0, 640, 360);
+      g.generateTexture(arena.key, 640, 360);
       g.destroy();
     }
   }

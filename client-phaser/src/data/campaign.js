@@ -79,7 +79,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 65,
     goldReward: 50,
     itemRewards: { potion: 1 },
-    mapPos: { x: 95, y: 415 },
+    mapPos: { x: 120, y: 195 },
     arenaTheme: 'bg_arena_solara',
     preDialogue: [
       {
@@ -109,7 +109,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 120,
     goldReward: 90,
     itemRewards: { potion: 1, rift_orb: 1 },
-    mapPos: { x: 245, y: 300 },
+    mapPos: { x: 320, y: 130 },
     arenaTheme: 'bg_arena_solara',
     preDialogue: [
       {
@@ -139,13 +139,20 @@ export const CAMPAIGN_NODES = [
     xpReward: 190,
     goldReward: 160,
     itemRewards: { super_potion: 1, rift_orb: 1 },
-    mapPos: { x: 180, y: 180 },
+    mapPos: { x: 520, y: 175 },
     arenaTheme: 'bg_arena_solara',
     preDialogue: [
       {
         speaker: 'Prof. Orin',
         portrait: 'portrait_orin',
         text: 'Waspadalah! Thornback, penjaga kuno Hutan Solara, dirasuki kristal duri kegelapan Eclipse!',
+      },
+    ],
+    phase2Dialogue: [
+      {
+        speaker: 'Prof. Orin',
+        portrait: 'portrait_orin',
+        text: 'Hati-hati! Duri kristal Thornback memancarkan gelombang kejut liar—ia memasuki Fase Amarah!',
       },
     ],
     postDialogue: [
@@ -173,7 +180,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 140,
     goldReward: 80,
     itemRewards: { potion: 1 },
-    mapPos: { x: 100, y: 410 },
+    mapPos: { x: 125, y: 185 },
     arenaTheme: 'bg_arena_azure',
     preDialogue: [
       {
@@ -203,7 +210,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 175,
     goldReward: 110,
     itemRewards: { potion: 2 },
-    mapPos: { x: 240, y: 295 },
+    mapPos: { x: 315, y: 120 },
     arenaTheme: 'bg_arena_azure',
     preDialogue: [
       {
@@ -233,13 +240,20 @@ export const CAMPAIGN_NODES = [
     xpReward: 275,
     goldReward: 240,
     itemRewards: { super_potion: 1, antidote: 1, rift_orb: 1 },
-    mapPos: { x: 175, y: 175 },
+    mapPos: { x: 515, y: 180 },
     arenaTheme: 'bg_arena_azure',
     preDialogue: [
       {
         speaker: 'Rift Warden',
         portrait: 'portrait_warden',
         text: 'Berhenti di sana, bocah! Arus pasang Tidecrest yang diperkuat energi Eclipse akan menenggelamkan asa kalian!',
+      },
+    ],
+    phase2Dialogue: [
+      {
+        speaker: 'Rift Warden',
+        portrait: 'portrait_warden',
+        text: 'Arus pasang Eclipse terbangun seutuhnya! Ombak badai Tidecrest akan menenggelamkan kalian!',
       },
     ],
     postDialogue: [
@@ -267,7 +281,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 230,
     goldReward: 130,
     itemRewards: { antidote: 1, potion: 1 },
-    mapPos: { x: 95, y: 420 },
+    mapPos: { x: 130, y: 190 },
     arenaTheme: 'bg_arena_ignis',
     preDialogue: [
       {
@@ -297,7 +311,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 340,
     goldReward: 270,
     itemRewards: { super_potion: 2, rift_orb: 1 },
-    mapPos: { x: 250, y: 305 },
+    mapPos: { x: 325, y: 140 },
     arenaTheme: 'bg_arena_ignis',
     preDialogue: [
       {
@@ -327,13 +341,20 @@ export const CAMPAIGN_NODES = [
     xpReward: 440,
     goldReward: 360,
     itemRewards: { super_potion: 2, rift_orb: 2 },
-    mapPos: { x: 180, y: 185 },
+    mapPos: { x: 525, y: 170 },
     arenaTheme: 'bg_arena_ignis',
     preDialogue: [
       {
         speaker: 'Rift Warden',
         portrait: 'portrait_warden',
         text: 'Kalian terlambat! Volcarok sang titan kaldera telah menyatu dengan bara kutukan lava terdalam!',
+      },
+    ],
+    phase2Dialogue: [
+      {
+        speaker: 'Rift Warden',
+        portrait: 'portrait_warden',
+        text: 'Kaldera bergolak! Volcarok menyerap inti lava terdalam—rasakan amarah bumi yang membara!',
       },
     ],
     postDialogue: [
@@ -361,7 +382,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 500,
     goldReward: 320,
     itemRewards: { super_potion: 2 },
-    mapPos: { x: 105, y: 415 },
+    mapPos: { x: 120, y: 180 },
     arenaTheme: 'bg_arena_eclipse',
     preDialogue: [
       {
@@ -391,7 +412,7 @@ export const CAMPAIGN_NODES = [
     xpReward: 590,
     goldReward: 400,
     itemRewards: { super_potion: 2, rift_orb: 2 },
-    mapPos: { x: 245, y: 300 },
+    mapPos: { x: 310, y: 125 },
     arenaTheme: 'bg_arena_eclipse',
     preDialogue: [
       {
@@ -421,13 +442,25 @@ export const CAMPAIGN_NODES = [
     xpReward: 900,
     goldReward: 650,
     itemRewards: { super_potion: 3, rift_orb: 3 },
-    mapPos: { x: 180, y: 170 },
+    mapPos: { x: 520, y: 165 },
     arenaTheme: 'bg_arena_eclipse',
     preDialogue: [
       {
         speaker: 'Umbravex',
         portrait: 'portrait_umbravex',
         text: 'GRAAAWRRR...! KEGELAPAN ABADI AKAN MENELAN SELURUH AETHERIA... IKATAN KALIAN AKAN HANCUR LEBUR DI SINI!',
+      },
+    ],
+    phase2Dialogue: [
+      {
+        speaker: 'Umbravex',
+        portrait: 'portrait_umbravex',
+        text: 'KAU BERANI MENENTANG KEHENDAK GERHANA?! SAKSIKAN KEKUATAN SEJATI DARI KEHAMPAAN ABADI!',
+      },
+      {
+        speaker: 'Umbravex',
+        portrait: 'portrait_umbravex',
+        text: 'ECLIPSE AWAKENING! SELURUH CAHAYA AETHERIA AKAN PADAM DI DALAM KELAM!',
       },
     ],
     postDialogue: [

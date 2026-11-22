@@ -20,7 +20,7 @@ Roadmap pengembangan bertahap menggunakan tim Paperclip (`Antigravity`, `Bima`, 
 
 ---
 
-## Sprint 3 — Polish, Audio, Boss Phases & Release v1.0
-- [ ] **M3.1 (Chiptune-Modern Web Audio):** Procedural BGM (Title, Map, Battle, Boss) + SFX (attack, elemental hit, crit, heal, capture, level-up, UI click) dengan kontrol volume/mute.
-- [ ] **M3.2 (Full 4-Chapter Content & Boss AI):** Lengkapi seluruh 12+ Monsver (termasuk Stage 2 Evolution), 12+ story nodes, dan Final Boss multi-phase **Umbravex**.
-- [ ] **M3.3 (QA Audit & Mobile Playtest):** Audit balancing C++ engine, pengujian headless Chromium pada resolusi mobile (`390×844`) & desktop, fix bugs, lalu rilis **v1.0** di `https://nayakacode.web.id/monsvers/`.
+## Sprint 3 — Polish, Audio, Boss Phases, Landscape Mode & Release v1.0
+- [x] **M3.1 (Chiptune-Modern Web Audio):** Procedural BGM (Title, Map, Battle, Boss) + SFX (attack, elemental hit, crit, heal, capture, level-up, UI click) dengan kontrol volume/mute.
+- [x] **M3.2 (Full 4-Chapter Content, Landscape `640×360` & Boss Phases):** Lengkapi seluruh 12 Monsver, 12 story nodes, panoramic `640×360` Mobile-First Landscape UI & Arena, dan Final Boss multi-phase **Umbravex** (Phase 2 Awakening).
+- [x] **M3.3 (QA Audit & Mobile Playtest):** Audit balancing C++ engine (multi-turn & Boss Phase 2 CTests), pengujian headless Chromium pada resolusi landscape, rilis **v1.0** di `https://nayakacode.web.id/monsvers/`.

@@ -5,6 +5,7 @@ import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { ELEMENT_META } from '../ui/BattleHud.js';
 import { DialogueBox } from '../ui/DialogueBox.js';
 import { gameState } from '../state/gameState.js';
+import { audioManager } from '../audio/audioManager.js';
 
 const FONT = 'monospace';
 
@@ -25,8 +26,8 @@ export class StarterSelectScene extends Phaser.Scene {
     const cx = Math.round(width / 2);
 
     this._buildBackdrop(width, height, cx);
-    this._buildHeader(cx);
-    this._buildStarterCards(cx);
+    this._buildHeader(width, cx);
+    this._buildStarterCards();
     this._buildConfirmButton(cx);
     this._refreshSelection();
 
@@ -62,22 +63,22 @@ export class StarterSelectScene extends Phaser.Scene {
     this.add.rectangle(cx, height / 2, width, height, 0x070c17, 0.82).setDepth(1);
   }
 
-  _buildHeader(cx) {
+  _buildHeader(width, cx) {
     const g = this.add.graphics().setDepth(10);
     g.fillStyle(0x0b1222, 0.96);
-    g.fillRect(0, 0, 360, 56);
+    g.fillRect(0, 0, width, 44);
     g.fillStyle(0x263554, 1);
-    g.fillRect(0, 54, 360, 2);
+    g.fillRect(0, 42, width, 2);
 
     // Back button
     const backBg = this.add
-      .rectangle(34, 28, 52, 28, 0x1e293b)
+      .rectangle(38, 22, 56, 24, 0x1e293b)
       .setStrokeStyle(1, 0x475569)
       .setInteractive({ useHandCursor: true })
       .setDepth(11);
 
     this.add
-      .text(34, 28, 'BACK', {
+      .text(38, 22, 'BACK', {
         fontFamily: FONT,
         fontSize: '10px',
         fontStyle: 'bold',
@@ -88,11 +89,12 @@ export class StarterSelectScene extends Phaser.Scene {
 
     backBg.on('pointerdown', () => {
       if (this.inputLocked) return;
+      audioManager.playSfx('click');
       this.scene.start('TitleScene');
     });
 
     this.add
-      .text(cx + 18, 20, 'PILIH STARTER MONSVER', {
+      .text(cx, 15, 'PILIH STARTER MONSVER', {
         fontFamily: FONT,
         fontSize: '14px',
         fontStyle: 'bold',
@@ -102,54 +104,76 @@ export class StarterSelectScene extends Phaser.Scene {
       .setDepth(11);
 
     this.add
-      .text(cx + 18, 39, 'Lab Prof. Orin • Desa Solara', {
+      .text(cx, 32, 'Lab Prof. Orin • Desa Solara', {
         fontFamily: FONT,
         fontSize: '10px',
         color: '#38bdf8',
       })
       .setOrigin(0.5)
       .setDepth(11);
+
+    // Audio toggle top-right
+    const audioBg = this.add
+      .rectangle(width - 48, 22, 72, 24, 0x162440)
+      .setStrokeStyle(1, 0x38bdf8)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(11);
+    const audioTxt = this.add
+      .text(width - 48, 22, 'SFX ON', {
+        fontFamily: FONT,
+        fontSize: '9px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5)
+      .setDepth(12);
+
+    const syncAudio = () => {
+      const muted = audioManager.isMuted();
+      audioBg.setFillStyle(muted ? 0x291522 : 0x162440);
+      audioBg.setStrokeStyle(1, muted ? 0xef4444 : 0x38bdf8);
+      audioTxt.setText(muted ? 'MUTED' : 'SFX ON');
+      audioTxt.setColor(muted ? '#fca5a5' : '#7dd3fc');
+    };
+    audioBg.on('pointerdown', () => {
+      audioManager.unlock();
+      audioManager.toggleMute();
+      syncAudio();
+      if (!audioManager.isMuted()) audioManager.playSfx('click');
+    });
+    syncAudio();
   }
 
-  _buildStarterCards(cx) {
-    const cardW = 336;
-    const cardH = 148;
-    const startY = 144;
-    const gapY = 158;
+  _buildStarterCards() {
+    // 3 crisp side-by-side starter cards (x: 112, 320, 528, w: 186, h: 214)
+    const cardCenters = [112, 320, 528];
+    const cardW = 186;
+    const cardH = 214;
+    const cy = 166;
+    const top = cy - cardH / 2;
 
-    STARTER_IDS.forEach((id, idx) => {
+    STARTER_IDS.slice(0, 3).forEach((id, idx) => {
       const def = MONSTERS[id];
       if (!def) return;
       const sample = createMonsterInstance(id, 5);
       const meta = ELEMENT_META[def.element] ?? ELEMENT_META[0];
-      const y = startY + idx * gapY;
+      const cx = cardCenters[idx] ?? 320;
       const left = cx - cardW / 2;
-      const top = y - cardH / 2;
 
       const bg = this.add
-        .rectangle(cx, y, cardW, cardH, 0x111a2e)
+        .rectangle(cx, cy, cardW, cardH, 0x111a2e)
         .setStrokeStyle(2, 0x334155)
         .setInteractive({ useHandCursor: true })
         .setDepth(5);
 
-      const stripe = this.add.rectangle(left + 4, y, 6, cardH - 4, meta.color).setDepth(6);
+      const stripe = this.add.rectangle(cx, top + 3, cardW - 4, 5, meta.color).setDepth(6);
 
-      // Sprite pedestal on left
-      this.add.ellipse(left + 54, y + 36, 58, 12, 0x020617, 0.55).setDepth(6);
-      this.add.circle(left + 54, y - 2, 32, meta.color, 0.14).setDepth(6);
-
-      const texKey = getMonsterTextureKey(id, 0);
-      const sprite = this.add
-        .image(left + 54, y - 4, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(1.3)
-        .setDepth(7);
-
-      // Selected badge
-      const selBg = this.add.rectangle(left + 54, top + 16, 68, 16, meta.color).setDepth(8).setVisible(false);
+      // Selected badge (top-left)
+      const selBg = this.add.rectangle(left + 36, top + 18, 60, 15, meta.color).setDepth(8).setVisible(false);
       const selTxt = this.add
-        .text(left + 54, top + 16, 'TERPILIH', {
+        .text(left + 36, top + 18, 'TERPILIH', {
           fontFamily: FONT,
-          fontSize: '9px',
+          fontSize: '8px',
           fontStyle: 'bold',
           color: '#070b14',
         })
@@ -157,68 +181,78 @@ export class StarterSelectScene extends Phaser.Scene {
         .setDepth(9)
         .setVisible(false);
 
-      // Name & Element pill
-      const infoX = left + 102;
-      this.add
-        .text(infoX, top + 12, def.name, {
-          fontFamily: FONT,
-          fontSize: '15px',
-          fontStyle: 'bold',
-          color: '#f8fafc',
-        })
-        .setDepth(7);
-
-      this.add
-        .text(infoX, top + 30, def.title ?? '', {
-          fontFamily: FONT,
-          fontSize: '10px',
-          color: '#94a3b8',
-        })
-        .setDepth(7);
-
       // Element pill (top-right)
-      this.add.rectangle(left + cardW - 38, top + 20, 56, 18, meta.bg).setStrokeStyle(1, meta.color).setDepth(7);
+      this.add.rectangle(left + cardW - 32, top + 18, 52, 15, meta.bg).setStrokeStyle(1, meta.color).setDepth(7);
       this.add
-        .text(left + cardW - 38, top + 20, meta.label, {
+        .text(left + cardW - 32, top + 18, meta.label, {
           fontFamily: FONT,
-          fontSize: '9px',
+          fontSize: '8px',
           fontStyle: 'bold',
           color: meta.hex,
         })
         .setOrigin(0.5)
         .setDepth(8);
 
-      // Compact stats bar (HP / ATK / DEF / SPD at Lv.5)
-      const statBoxY = top + 56;
-      this.add.rectangle(infoX + 112, statBoxY, 224, 22, 0x090e1a).setStrokeStyle(1, 0x1e293b).setDepth(6);
+      // Sprite pedestal centered in upper half
+      const spriteY = top + 64;
+      this.add.ellipse(cx, spriteY + 30, 62, 12, 0x020617, 0.55).setDepth(6);
+      this.add.circle(cx, spriteY + 2, 28, meta.color, 0.14).setDepth(6);
+
+      const texKey = getMonsterTextureKey(id, 0);
+      const sprite = this.add
+        .image(cx, spriteY, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .setScale(1.22)
+        .setDepth(7);
+
+      // Name & Title
       this.add
-        .text(
-          infoX + 8,
-          statBoxY,
-          `HP ${sample.maxHp}  ATK ${sample.attack}  DEF ${sample.defense}  SPD ${sample.speed}`,
-          {
-            fontFamily: FONT,
-            fontSize: '9px',
-            fontStyle: 'bold',
-            color: '#e2e8f0',
-          }
-        )
-        .setOrigin(0, 0.5)
+        .text(cx, top + 104, def.name, {
+          fontFamily: FONT,
+          fontSize: '14px',
+          fontStyle: 'bold',
+          color: '#f8fafc',
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(7);
+
+      this.add
+        .text(cx, top + 121, def.title ?? '', {
+          fontFamily: FONT,
+          fontSize: '9px',
+          color: '#94a3b8',
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(7);
+
+      // Compact stats bar (HP / ATK / DEF / SPD at Lv.5)
+      const statBoxY = top + 146;
+      this.add.rectangle(cx, statBoxY, cardW - 14, 22, 0x090e1a).setStrokeStyle(1, 0x1e293b).setDepth(6);
+      this.add
+        .text(cx, statBoxY, `HP ${sample.maxHp}  ATK ${sample.attack}  DEF ${sample.defense}  SPD ${sample.speed}`, {
+          fontFamily: FONT,
+          fontSize: '8px',
+          fontStyle: 'bold',
+          color: '#e2e8f0',
+        })
+        .setOrigin(0.5)
         .setDepth(7);
 
       // Short Indonesian lore bio
       this.add
-        .text(infoX, top + 74, def.bio ?? '', {
+        .text(cx, top + 164, def.bio ?? '', {
           fontFamily: FONT,
-          fontSize: '10px',
+          fontSize: '9px',
           color: '#cbd5e1',
-          lineSpacing: 3,
-          wordWrap: { width: 222 },
+          align: 'center',
+          lineSpacing: 2,
+          wordWrap: { width: cardW - 18 },
         })
+        .setOrigin(0.5, 0)
         .setDepth(7);
 
       bg.on('pointerdown', () => {
         if (this.inputLocked) return;
+        audioManager.playSfx('click');
         this.selectedId = id;
         this._refreshSelection();
       });
@@ -229,15 +263,15 @@ export class StarterSelectScene extends Phaser.Scene {
 
   _buildConfirmButton(cx) {
     this.confirmBg = this.add
-      .rectangle(cx, 596, 304, 50, 0x10b981)
+      .rectangle(cx, 326, 340, 42, 0x10b981)
       .setStrokeStyle(2, 0xf8fafc)
       .setInteractive({ useHandCursor: true })
       .setDepth(10);
 
     this.confirmTxt = this.add
-      .text(cx, 596, 'PILIH PYROFANG & MULAI!', {
+      .text(cx, 326, 'PILIH PYROFANG & MULAI!', {
         fontFamily: FONT,
-        fontSize: '14px',
+        fontSize: '13px',
         fontStyle: 'bold',
         color: '#070b14',
       })
@@ -246,6 +280,7 @@ export class StarterSelectScene extends Phaser.Scene {
 
     this.confirmBg.on('pointerdown', () => {
       if (this.inputLocked) return;
+      audioManager.playSfx('click');
       this.confirmBg.setScale(0.97);
       this.confirmTxt.setScale(0.97);
       gameState.resetNewGame(this.selectedId);
@@ -263,7 +298,7 @@ export class StarterSelectScene extends Phaser.Scene {
       ref.stripe.setAlpha(selected ? 1 : 0.45);
       ref.selBg.setVisible(selected);
       ref.selTxt.setVisible(selected);
-      ref.sprite.setScale(selected ? 1.4 : 1.22);
+      ref.sprite.setScale(selected ? 1.35 : 1.18);
     });
 
     const selectedDef = MONSTERS[this.selectedId];

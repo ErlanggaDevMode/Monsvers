@@ -383,6 +383,203 @@ void test_ai_tiers() {
     assert(boss_finish == 1 || boss_finish == 2);
 }
 
+Monster make_scaled_monster(
+    const std::string& id,
+    const std::string& name,
+    Element el,
+    int level,
+    int base_hp,
+    int max_sp,
+    int base_atk,
+    int base_def,
+    int base_spd
+) {
+    const double scale = 1.0 + static_cast<double>(level - 1) * 0.12;
+    const int hp = static_cast<int>(std::round(base_hp * scale));
+    const int atk = static_cast<int>(std::round(base_atk * scale));
+    const int def = static_cast<int>(std::round(base_def * scale));
+    const int spd = static_cast<int>(std::round(base_spd * scale));
+    return make_monster(id, name, el, level, hp, max_sp, atk, def, spd);
+}
+
+struct SimSummary {
+    int turns = 0;
+    bool player_won = false;
+    bool boss_entered_phase2 = false;
+    int player_damage_dealt = 0;
+    int boss_damage_dealt = 0;
+};
+
+SimSummary simulate_boss_battle(
+    Monster player,
+    const std::vector<Skill>& player_skills,
+    Monster boss,
+    const std::vector<Skill>& boss_skills,
+    uint32_t seed_base
+) {
+    SimSummary summary{};
+    constexpr int kMaxTurns = 40;
+
+    for (int turn = 1; turn <= kMaxTurns && player.current_hp > 0 && boss.current_hp > 0; ++turn) {
+        summary.turns = turn;
+        player.guarding = false;
+        boss.guarding = false;
+
+        if (boss.current_hp * 2 <= boss.max_hp) {
+            summary.boss_entered_phase2 = true;
+        }
+
+        // Player uses Rival-tier tactical decision making to simulate an engaged player
+        const int p_idx = AiController::choose_action(player, boss, player_skills, AiTier::Rival, seed_base + turn * 17U);
+        const int b_idx = AiController::choose_action(boss, player, boss_skills, AiTier::Boss, seed_base + turn * 31U);
+
+        const int p_prio = (p_idx >= 0) ? player_skills[p_idx].priority : 2;
+        const int b_prio = (b_idx >= 0) ? boss_skills[b_idx].priority : 2;
+        const int first = BattleEngine::determine_turn_order(
+            player.speed, p_prio, player.status,
+            boss.speed, b_prio, boss.status
+        );
+
+        auto execute_player = [&](uint32_t seed) {
+            if (player.current_hp <= 0 || boss.current_hp <= 0) return;
+            if (p_idx < 0) {
+                BattleEngine::resolve_guard(player);
+            } else {
+                AttackResult r = BattleEngine::resolve_attack(player, boss, player_skills[p_idx], seed);
+                summary.player_damage_dealt += r.damage;
+            }
+            if (boss.current_hp * 2 <= boss.max_hp && boss.current_hp > 0) {
+                summary.boss_entered_phase2 = true;
+            }
+        };
+
+        auto execute_boss = [&](uint32_t seed) {
+            if (boss.current_hp <= 0 || player.current_hp <= 0) return;
+            if (b_idx < 0) {
+                BattleEngine::resolve_guard(boss);
+            } else {
+                AttackResult r = BattleEngine::resolve_attack(boss, player, boss_skills[b_idx], seed);
+                summary.boss_damage_dealt += r.damage;
+            }
+        };
+
+        if (first == 1) {
+            execute_player(seed_base + turn * 101U);
+            execute_boss(seed_base + turn * 103U);
+        } else {
+            execute_boss(seed_base + turn * 103U);
+            execute_player(seed_base + turn * 101U);
+        }
+
+        // End-of-turn status ticks & passive SP regen
+        if (player.current_hp > 0 && boss.current_hp > 0) {
+            BattleEngine::process_status_tick(player, seed_base + turn * 211U);
+        }
+        if (boss.current_hp > 0 && player.current_hp > 0) {
+            BattleEngine::process_status_tick(boss, seed_base + turn * 223U);
+        }
+
+        // Invariant checks every turn
+        assert(player.current_hp >= 0 && player.current_hp <= player.max_hp);
+        assert(boss.current_hp >= 0 && boss.current_hp <= boss.max_hp);
+        assert(player.current_sp >= 0 && player.current_sp <= player.max_sp);
+        assert(boss.current_sp >= 0 && boss.current_sp <= boss.max_sp);
+    }
+
+    summary.player_won = (player.current_hp > 0 && boss.current_hp == 0);
+    return summary;
+}
+
+void test_boss_phase2_ai_aggression() {
+    // Umbravex Lv.15 vs Blazefang Lv.10
+    Monster boss = make_scaled_monster("umbravex", "Umbravex", Element::Shadow, 15, 210, 70, 48, 32, 36);
+    Monster player = make_scaled_monster("blazefang", "Blazefang", Element::Fire, 10, 175, 55, 44, 26, 34);
+
+    std::vector<Skill> boss_skills = {
+        make_skill("dark_shroud", "Dark Shroud", Element::Shadow, 0, 10, 100, 1, 0, StatusType::Shield, 100, 0),
+        make_skill("shadow_claw", "Shadow Claw", Element::Shadow, 45, 8, 95, 0, 18),
+        make_skill("void_strike", "Void Strike", Element::Shadow, 70, 15, 90, 0, 20, StatusType::Paralyze, 25, 0),
+        make_skill("apex_cataclysm", "Apex Cataclysm", Element::Shadow, 100, 30, 85, 0, 30, StatusType::Paralyze, 40, 0)
+    };
+
+    // Phase 1 (>50% HP): healthy boss with no buff sets up Dark Shroud
+    boss.current_hp = boss.max_hp;
+    int p1_pick = AiController::choose_action(boss, player, boss_skills, AiTier::Boss, 42U);
+    assert(p1_pick == 0);
+
+    // Phase 2 (<50% HP): skips defensive setup and unleashes highest-damage Apex Cataclysm
+    boss.current_hp = (boss.max_hp / 2) - 1;
+    int p2_pick = AiController::choose_action(boss, player, boss_skills, AiTier::Boss, 42U);
+    assert(p2_pick == 3);
+
+    // Phase 2 with SP too low for Apex Cataclysm (20 SP): picks Void Strike (power 70) over Shadow Claw (45) & Dark Shroud (0)
+    boss.current_sp = 20;
+    int p2_mid_sp = AiController::choose_action(boss, player, boss_skills, AiTier::Boss, 42U);
+    assert(p2_mid_sp == 2);
+
+    // Phase 2 with low SP (5 SP) and a 0-SP attack available: refuses to guard and stays aggressive
+    std::vector<Skill> boss_with_basic = {
+        make_skill("quick_strike", "Quick Strike", Element::Neutral, 30, 0, 100, 1, 15),
+        make_skill("apex_cataclysm", "Apex Cataclysm", Element::Shadow, 100, 30, 85, 0, 30)
+    };
+    boss.current_sp = 5;
+    int p2_no_guard = AiController::choose_action(boss, player, boss_with_basic, AiTier::Boss, 42U);
+    assert(p2_no_guard == 0);
+
+    // Phase 2 lethal punishment: picks reliable priority finisher when player is in lethal range
+    player.current_hp = 20;
+    boss.current_sp = 70;
+    int p2_lethal = AiController::choose_action(boss, player, boss_with_basic, AiTier::Boss, 42U);
+    assert(p2_lethal == 0);  // priority + 100% accuracy lethal finisher
+}
+
+void test_multiturn_balance_simulations() {
+    // 1. Lv.5 Starter (Pyrofang) vs Lv.7 Chapter 1 Boss (Thornback)
+    Monster pyro_lv5 = make_scaled_monster("pyrofang", "Pyrofang", Element::Fire, 5, 120, 40, 28, 16, 22);
+    std::vector<Skill> pyro_skills = {
+        make_skill("ember_claw", "Ember Claw", Element::Fire, 42, 8, 95, 0, 15, StatusType::Burn, 25, 0),
+        make_skill("quick_strike", "Quick Strike", Element::Neutral, 30, 0, 100, 1, 15),
+        make_skill("flame_burst", "Flame Burst", Element::Fire, 65, 14, 90, 0, 15, StatusType::Burn, 35, 0),
+        make_skill("focus_energy", "Focus Energy", Element::Neutral, 0, 8, 100, 0, 0, StatusType::AttackUp, 100, 0)
+    };
+
+    Monster thornback_lv7 = make_scaled_monster("thornback", "Thornback", Element::Nature, 7, 160, 50, 32, 28, 14);
+    std::vector<Skill> thornback_skills = {
+        make_skill("vine_lash", "Vine Lash", Element::Nature, 40, 8, 95, 0, 12, StatusType::Poison, 25, 0),
+        make_skill("thorn_barrage", "Thorn Barrage", Element::Nature, 65, 14, 90, 0, 15, StatusType::Poison, 35, 0),
+        make_skill("bramble_crush", "Bramble Crush", Element::Nature, 88, 22, 85, 0, 18, StatusType::Poison, 40, 0),
+        make_skill("iron_defense", "Iron Defense", Element::Neutral, 0, 8, 100, 1, 0, StatusType::Shield, 100, 0)
+    };
+
+    SimSummary ch1 = simulate_boss_battle(pyro_lv5, pyro_skills, thornback_lv7, thornback_skills, 1001U);
+    assert(ch1.turns >= 3 && ch1.turns <= 25);
+    assert(ch1.player_damage_dealt >= 100 && ch1.boss_damage_dealt >= 100);
+    assert(ch1.boss_entered_phase2);  // Lv.5 Fire starter pushes Lv.7 Thornback into Phase 2
+
+    // 2. Lv.10 Evolved (Blazefang) vs Lv.15 Final Boss (Umbravex) balance sanity check
+    Monster blaze_lv10 = make_scaled_monster("blazefang", "Blazefang", Element::Fire, 10, 175, 55, 44, 26, 34);
+    std::vector<Skill> blaze_skills = {
+        make_skill("ember_claw", "Ember Claw", Element::Fire, 42, 8, 95, 0, 15, StatusType::Burn, 25, 0),
+        make_skill("flame_burst", "Flame Burst", Element::Fire, 65, 14, 90, 0, 15, StatusType::Burn, 35, 0),
+        make_skill("inferno_pillar", "Inferno Pillar", Element::Fire, 90, 24, 85, 0, 20, StatusType::Burn, 45, 0),
+        make_skill("cauterize", "Cauterize", Element::Fire, 0, 12, 100, 0, 0, StatusType::None, 0, 35)
+    };
+
+    Monster umbravex_lv15 = make_scaled_monster("umbravex", "Umbravex", Element::Shadow, 15, 210, 70, 48, 32, 36);
+    std::vector<Skill> umbravex_skills = {
+        make_skill("shadow_claw", "Shadow Claw", Element::Shadow, 45, 8, 95, 0, 18),
+        make_skill("void_strike", "Void Strike", Element::Shadow, 70, 15, 90, 0, 20, StatusType::Paralyze, 25, 0),
+        make_skill("eclipse_abyss", "Eclipse Abyss", Element::Shadow, 92, 24, 85, 0, 24, StatusType::Burn, 30, 0),
+        make_skill("apex_cataclysm", "Apex Cataclysm", Element::Shadow, 100, 30, 85, 0, 30, StatusType::Paralyze, 40, 0)
+    };
+
+    SimSummary final_boss = simulate_boss_battle(blaze_lv10, blaze_skills, umbravex_lv15, umbravex_skills, 2026U);
+    // Final boss fight must be a genuine multi-turn clash (no 1-turn OHKO, no stalemate)
+    assert(final_boss.turns >= 2 && final_boss.turns <= 30);
+    assert(final_boss.player_damage_dealt > 0);
+    assert(final_boss.boss_damage_dealt >= 100);
+}
+
 }  // namespace
 
 int main() {
@@ -394,6 +591,8 @@ int main() {
     test_capture_mechanics();
     test_xp_and_evolution();
     test_ai_tiers();
+    test_boss_phase2_ai_aggression();
+    test_multiturn_balance_simulations();
 
     std::cout << "[OK] All Monsvers BattleEngine v2 & AI Controller native C++ tests passed!\n";
     return 0;

@@ -13,48 +13,48 @@ export class BootScene extends Phaser.Scene {
     const cx = Math.round(width / 2);
     const cy = Math.round(height / 2);
 
-    // Rich dark pixel-art boot backdrop
+    // Rich dark pixel-art boot backdrop (640x360)
     this.add.rectangle(cx, cy, width, height, 0x090e1a);
-    this.add.rectangle(cx, cy - 110, 260, 2, 0x1e293b);
-    this.add.rectangle(cx, cy + 120, 260, 2, 0x1e293b);
+    this.add.rectangle(cx, cy - 86, 360, 2, 0x1e293b);
+    this.add.rectangle(cx, cy + 88, 360, 2, 0x1e293b);
 
-    // Subtle decorative pixel diamond emblem
+    // Subtle decorative pixel diamond emblem centered above title
     const emblem = this.add.graphics();
     emblem.fillStyle(0xf97316, 0.9);
-    emblem.fillRect(cx - 10, cy - 154, 20, 20);
+    emblem.fillRect(cx - 10, cy - 124, 20, 20);
     emblem.fillStyle(0xfde047, 1);
-    emblem.fillRect(cx - 6, cy - 150, 12, 12);
+    emblem.fillRect(cx - 6, cy - 120, 12, 12);
     emblem.fillStyle(0x38bdf8, 0.85);
-    emblem.fillRect(cx - 26, cy - 148, 8, 8);
+    emblem.fillRect(cx - 28, cy - 118, 8, 8);
     emblem.fillStyle(0x22c55e, 0.85);
-    emblem.fillRect(cx + 18, cy - 148, 8, 8);
+    emblem.fillRect(cx + 20, cy - 118, 8, 8);
 
     this.add
-      .text(cx, cy - 82, 'MONSVERS', {
+      .text(cx, cy - 52, 'MONSVERS', {
         fontFamily: 'monospace',
-        fontSize: '30px',
+        fontSize: '34px',
         fontStyle: 'bold',
         color: '#f8fafc',
         stroke: '#1e293b',
-        strokeThickness: 4,
+        strokeThickness: 5,
       })
       .setOrigin(0.5);
 
     this.add
-      .text(cx, cy - 52, 'THE BATTLE MONSTER', {
+      .text(cx, cy - 22, 'THE BATTLE MONSTER', {
         fontFamily: 'monospace',
         fontSize: '11px',
         fontStyle: 'bold',
         color: '#38bdf8',
-        letterSpacing: 2,
+        letterSpacing: 3,
       })
       .setOrigin(0.5);
 
-    // Crisp pixel loading bar frame
-    const barW = 220;
+    // Crisp pixel loading bar frame centered at (320, 180)
+    const barW = 280;
     const barH = 16;
     const barX = cx - barW / 2;
-    const barY = cy + 8;
+    const barY = cy + 12;
 
     this.add.rectangle(cx, barY + barH / 2, barW + 4, barH + 4, 0x334155);
     this.add.rectangle(cx, barY + barH / 2, barW, barH, 0x0f172a);

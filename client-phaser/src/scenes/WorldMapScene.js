@@ -5,6 +5,7 @@ import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { battleBridge } from '../bridge/battleBridge.js';
 import { ELEMENT_META } from '../ui/BattleHud.js';
 import { gameState } from '../state/gameState.js';
+import { audioManager } from '../audio/audioManager.js';
 
 const FONT = 'monospace';
 
@@ -33,7 +34,6 @@ export class WorldMapScene extends Phaser.Scene {
     if (data?.chapter) {
       this.activeChapter = data.chapter;
     } else {
-      // Auto-focus chapter containing the next uncompleted unlocked node
       const nextOpen = CAMPAIGN_NODES.find(
         (n) => gameState.isNodeUnlocked(n.id) && !gameState.completedNodeIds.includes(n.id)
       );
@@ -48,37 +48,83 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   create() {
-    this.add.rectangle(180, 320, 360, 640, 0x090e1a).setDepth(0);
+    this.add.rectangle(320, 180, 640, 360, 0x090e1a).setDepth(0);
 
     this._buildTopBar();
-    this._buildChapterTabs();
     this._buildBottomActionBar();
 
     this._renderChapterMap();
     this._renderPartyStrip();
+
+    audioManager.playBgm('map');
   }
 
   _buildTopBar() {
+    // Top Bar (y: 0..34, w: 640)
     const g = this.add.graphics().setDepth(20);
     g.fillStyle(0x0b1222, 0.98);
-    g.fillRect(0, 0, 360, 44);
+    g.fillRect(0, 0, 640, 34);
     g.fillStyle(0x263554, 1);
-    g.fillRect(0, 42, 360, 2);
+    g.fillRect(0, 32, 640, 2);
 
     this.add
-      .text(10, 14, 'CAMPAIGN MAP', {
+      .text(10, 17, 'CAMPAIGN MAP', {
         fontFamily: FONT,
-        fontSize: '12px',
+        fontSize: '11px',
         fontStyle: 'bold',
         color: '#f8fafc',
       })
+      .setOrigin(0, 0.5)
       .setDepth(21);
 
+    // Inline 4 Chapter tabs (CH.1 - CH.4)
+    const tabW = 54;
+    const tabH = 24;
+    const gap = 4;
+    const startX = 114;
+    const tabY = 5;
+
+    this.tabRefs = CHAPTERS.slice(0, 4).map((ch, idx) => {
+      const x = startX + idx * (tabW + gap);
+      const accentInt = hexToInt(ch.accent, 0x38bdf8);
+
+      const bg = this.add
+        .rectangle(x + tabW / 2, tabY + tabH / 2, tabW, tabH, 0x131c31)
+        .setStrokeStyle(1, 0x263554)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(21);
+
+      const bar = this.add.rectangle(x + tabW / 2, tabY + 2, tabW - 4, 3, accentInt).setDepth(22);
+
+      const label = this.add
+        .text(x + tabW / 2, tabY + tabH / 2 + 1, `CH.${ch.id}`, {
+          fontFamily: FONT,
+          fontSize: '10px',
+          fontStyle: 'bold',
+          color: '#94a3b8',
+        })
+        .setOrigin(0.5)
+        .setDepth(22);
+
+      bg.on('pointerdown', () => {
+        if (this.activeChapter === ch.id) return;
+        audioManager.playSfx('click');
+        this.activeChapter = ch.id;
+        this._hidePreviewCard();
+        this._renderChapterMap();
+      });
+
+      return { ch, accentInt, bg, bar, label };
+    });
+
+    this._refreshTabs();
+
+    // Gold & Progress %
     const totalNodes = Math.max(1, CAMPAIGN_NODES.length);
     const pct = Math.min(100, Math.round((gameState.completedNodeIds.length / totalNodes) * 100));
 
     this.goldText = this.add
-      .text(186, 22, `${gameState.gold}G`, {
+      .text(420, 17, `${gameState.gold}G`, {
         fontFamily: FONT,
         fontSize: '11px',
         fontStyle: 'bold',
@@ -88,7 +134,7 @@ export class WorldMapScene extends Phaser.Scene {
       .setDepth(21);
 
     this.progressText = this.add
-      .text(244, 22, `${pct}%`, {
+      .text(468, 17, `${pct}%`, {
         fontFamily: FONT,
         fontSize: '11px',
         fontStyle: 'bold',
@@ -97,14 +143,51 @@ export class WorldMapScene extends Phaser.Scene {
       .setOrigin(1, 0.5)
       .setDepth(21);
 
+    // Audio mute toggle
+    const audioBg = this.add
+      .rectangle(522, 17, 68, 22, 0x162440)
+      .setStrokeStyle(1, 0x38bdf8)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(21);
+
+    const audioTxt = this.add
+      .text(522, 17, 'SFX ON', {
+        fontFamily: FONT,
+        fontSize: '9px',
+        fontStyle: 'bold',
+        color: '#7dd3fc',
+      })
+      .setOrigin(0.5)
+      .setDepth(22);
+
+    const syncAudio = () => {
+      const muted = audioManager.isMuted();
+      audioBg.setFillStyle(muted ? 0x291522 : 0x162440);
+      audioBg.setStrokeStyle(1, muted ? 0xef4444 : 0x38bdf8);
+      audioTxt.setText(muted ? 'MUTED' : 'SFX ON');
+      audioTxt.setColor(muted ? '#fca5a5' : '#7dd3fc');
+    };
+
+    audioBg.on('pointerdown', () => {
+      audioManager.unlock();
+      audioManager.toggleMute();
+      syncAudio();
+      if (!audioManager.isMuted()) {
+        audioManager.playSfx('click');
+        audioManager.playBgm('map');
+      }
+    });
+    syncAudio();
+
+    // TITLE button
     const titleBtn = this.add
-      .rectangle(316, 22, 68, 26, 0x1e293b)
+      .rectangle(598, 17, 64, 22, 0x1e293b)
       .setStrokeStyle(1, 0x475569)
       .setInteractive({ useHandCursor: true })
       .setDepth(21);
 
     this.add
-      .text(316, 22, 'TITLE', {
+      .text(598, 17, 'TITLE', {
         fontFamily: FONT,
         fontSize: '10px',
         fontStyle: 'bold',
@@ -115,56 +198,17 @@ export class WorldMapScene extends Phaser.Scene {
 
     titleBtn.on('pointerover', () => titleBtn.setFillStyle(0x334155));
     titleBtn.on('pointerout', () => titleBtn.setFillStyle(0x1e293b));
-    titleBtn.on('pointerdown', () => this.scene.start('TitleScene'));
-  }
-
-  _buildChapterTabs() {
-    const tabW = 82;
-    const tabH = 38;
-    const gap = 4;
-    const startX = 10;
-    const y = 48;
-
-    this.tabRefs = CHAPTERS.slice(0, 4).map((ch, idx) => {
-      const x = startX + idx * (tabW + gap);
-      const accentInt = hexToInt(ch.accent, 0x38bdf8);
-
-      const bg = this.add
-        .rectangle(x + tabW / 2, y + tabH / 2, tabW, tabH, 0x131c31)
-        .setStrokeStyle(2, 0x263554)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(20);
-
-      const bar = this.add.rectangle(x + tabW / 2, y + 3, tabW - 4, 4, accentInt).setDepth(21);
-
-      const label = this.add
-        .text(x + tabW / 2, y + tabH / 2 + 2, `CH.${ch.id}`, {
-          fontFamily: FONT,
-          fontSize: '12px',
-          fontStyle: 'bold',
-          color: '#94a3b8',
-        })
-        .setOrigin(0.5)
-        .setDepth(21);
-
-      bg.on('pointerdown', () => {
-        if (this.activeChapter === ch.id) return;
-        this.activeChapter = ch.id;
-        this._hidePreviewCard();
-        this._renderChapterMap();
-      });
-
-      return { ch, accentInt, bg, bar, label };
+    titleBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
+      this.scene.start('TitleScene');
     });
-
-    this._refreshTabs();
   }
 
   _refreshTabs() {
     this.tabRefs.forEach((tab) => {
       const active = tab.ch.id === this.activeChapter;
       tab.bg.setFillStyle(active ? 0x1e2d4a : 0x111829);
-      tab.bg.setStrokeStyle(2, active ? tab.accentInt : 0x24314a);
+      tab.bg.setStrokeStyle(1, active ? tab.accentInt : 0x24314a);
       tab.label.setColor(active ? '#ffffff' : '#64748b');
       tab.bar.setAlpha(active ? 1 : 0.35);
     });
@@ -182,36 +226,36 @@ export class WorldMapScene extends Phaser.Scene {
     const chapter = CHAPTERS.find((c) => c.id === this.activeChapter) ?? CHAPTERS[0];
     const accentInt = hexToInt(chapter?.accent, 0x38bdf8);
 
-    // Map canvas bounds: y: 92..500 (height 408)
-    const mapCenterY = 296;
-    const mapH = 408;
+    // Scenic Wide Map Canvas: y: 38..274 (height 236, width 640)
+    const mapCenterY = 156;
+    const mapH = 236;
 
     const bgKey = chapter?.theme && this.textures.exists(chapter.theme) ? chapter.theme : 'bg_arena_solara';
     if (this.textures.exists(bgKey)) {
-      const bgImg = this.add.image(180, mapCenterY, bgKey);
-      bgImg.setDisplaySize(360, mapH);
+      const bgImg = this.add.image(320, mapCenterY, bgKey);
+      bgImg.setDisplaySize(640, mapH);
       bgImg.setTint(0x64748b);
       this.mapContainer.add(bgImg);
     } else {
-      this.mapContainer.add(this.add.rectangle(180, mapCenterY, 360, mapH, 0x0f172a));
+      this.mapContainer.add(this.add.rectangle(320, mapCenterY, 640, mapH, 0x0f172a));
     }
 
-    // Tasteful dark scrim + frame
-    const scrim = this.add.rectangle(180, mapCenterY, 360, mapH, 0x060b16, 0.62);
+    // Tasteful dark scrim
+    const scrim = this.add.rectangle(320, mapCenterY, 640, mapH, 0x060b16, 0.58);
     this.mapContainer.add(scrim);
 
-    // Chapter banner at top of map (y: 96..134)
-    const bannerBg = this.add.rectangle(180, 114, 340, 36, 0x0b1222, 0.92).setStrokeStyle(1, accentInt);
-    const bannerStripe = this.add.rectangle(13, 114, 4, 32, accentInt);
-    const bannerTitle = this.add.text(24, 102, `CH.${chapter.id} — ${chapter.name}`, {
+    // Chapter title banner top-left (x: 10, y: 42, w: 244, h: 30)
+    const bannerBg = this.add.rectangle(132, 57, 244, 30, 0x0b1222, 0.92).setStrokeStyle(1, accentInt);
+    const bannerStripe = this.add.rectangle(13, 57, 4, 26, accentInt);
+    const bannerTitle = this.add.text(22, 46, `CH.${chapter.id} — ${chapter.name}`, {
       fontFamily: FONT,
-      fontSize: '12px',
+      fontSize: '11px',
       fontStyle: 'bold',
       color: '#f8fafc',
     });
-    const bannerSub = this.add.text(24, 118, chapter.subtitle ?? '', {
+    const bannerSub = this.add.text(22, 60, chapter.subtitle ?? '', {
       fontFamily: FONT,
-      fontSize: '10px',
+      fontSize: '9px',
       color: chapter.accent ?? '#38bdf8',
     });
     this.mapContainer.add([bannerBg, bannerStripe, bannerTitle, bannerSub]);
@@ -220,7 +264,7 @@ export class WorldMapScene extends Phaser.Scene {
 
     if (nodes.length === 0) {
       const emptyTxt = this.add
-        .text(180, 296, 'Chapter ini belum memiliki stage.\nSelesaikan chapter sebelumnya!', {
+        .text(320, mapCenterY, 'Chapter ini belum memiliki stage.\nSelesaikan chapter sebelumnya!', {
           fontFamily: FONT,
           fontSize: '11px',
           color: '#94a3b8',
@@ -231,14 +275,27 @@ export class WorldMapScene extends Phaser.Scene {
       return;
     }
 
-    // Compute clamped pin positions inside map canvas (y: 168..456, x: 48..312)
-    const positioned = nodes.map((node) => ({
-      node,
-      x: Math.max(48, Math.min(312, node.mapPos?.x ?? 180)),
-      y: Math.max(168, Math.min(456, node.mapPos?.y ?? 300)),
-    }));
+    // Position nodes left-to-right; if campaign.js still carries legacy portrait y (> 274),
+    // gracefully map them across the wide 640x360 canvas, always clamped to x: 70..570, y: 78..244.
+    const hasLegacyPortraitCoords = nodes.some((n) => (n.mapPos?.y ?? 0) > 274);
+    const fallbackXs = [132, 320, 508];
+    const fallbackYs = [196, 134, 174];
 
-    // Draw glowing dotted pixel trails between consecutive nodes
+    const positioned = nodes.map((node, idx) => {
+      let rawX = node.mapPos?.x ?? fallbackXs[idx % fallbackXs.length];
+      let rawY = node.mapPos?.y ?? fallbackYs[idx % fallbackYs.length];
+      if (hasLegacyPortraitCoords) {
+        rawX = fallbackXs[idx] ?? 110 + idx * 190;
+        rawY = fallbackYs[idx] ?? 168;
+      }
+      return {
+        node,
+        x: Math.max(70, Math.min(570, rawX)),
+        y: Math.max(78, Math.min(244, rawY)),
+      };
+    });
+
+    // Draw glowing dotted pixel trails connecting consecutive nodes left-to-right
     const trailG = this.add.graphics();
     for (let i = 0; i < positioned.length - 1; i++) {
       const a = positioned[i];
@@ -247,7 +304,7 @@ export class WorldMapScene extends Phaser.Scene {
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const dist = Math.hypot(dx, dy);
-      const steps = Math.max(4, Math.floor(dist / 12));
+      const steps = Math.max(5, Math.floor(dist / 14));
 
       for (let s = 1; s < steps; s++) {
         const px = Math.round(a.x + (dx * s) / steps);
@@ -271,9 +328,8 @@ export class WorldMapScene extends Phaser.Scene {
       const cleared = gameState.completedNodeIds.includes(node.id);
       const isBoss = node.type === 'boss';
       const isCurrent = unlocked && !cleared;
-      const radius = isBoss ? 24 : 19;
+      const radius = isBoss ? 22 : 18;
 
-      // Pulsing glowing ring for OPEN / CURRENT node
       if (isCurrent) {
         const pulseRing = this.add
           .circle(x, y, radius + 7, isBoss ? 0xef4444 : accentInt, 0.25)
@@ -290,7 +346,6 @@ export class WorldMapScene extends Phaser.Scene {
         this.mapContainer.add(pulseRing);
       }
 
-      // Pin base circle
       const fillColor = !unlocked
         ? 0x1e293b
         : isBoss
@@ -335,7 +390,7 @@ export class WorldMapScene extends Phaser.Scene {
         const checkTxt = this.add
           .text(x, y, '✓', {
             fontFamily: FONT,
-            fontSize: isBoss ? '18px' : '15px',
+            fontSize: isBoss ? '17px' : '15px',
             fontStyle: 'bold',
             color: '#6ee7b7',
           })
@@ -345,7 +400,7 @@ export class WorldMapScene extends Phaser.Scene {
         const numTxt = this.add
           .text(x, y, `${node.index ?? 1}`, {
             fontFamily: FONT,
-            fontSize: isBoss ? '16px' : '14px',
+            fontSize: isBoss ? '15px' : '13px',
             fontStyle: 'bold',
             color: '#ffffff',
           })
@@ -353,13 +408,14 @@ export class WorldMapScene extends Phaser.Scene {
         this.mapContainer.add(numTxt);
       }
 
-      // PLAY / BOSS status tag above/below pin
+      // OPEN / BOSS / CLEARED status tag above pin
       if (isCurrent) {
-        const tagBg = this.add.rectangle(x, y - radius - (isBoss ? 18 : 11), 42, 14, isBoss ? 0xef4444 : accentInt);
+        const tagY = y - radius - (isBoss ? 17 : 11);
+        const tagBg = this.add.rectangle(x, tagY, 44, 14, isBoss ? 0xef4444 : accentInt);
         const tagTxt = this.add
-          .text(x, y - radius - (isBoss ? 18 : 11), isBoss ? 'BOSS' : 'PLAY', {
+          .text(x, tagY, isBoss ? 'BOSS' : 'OPEN', {
             fontFamily: FONT,
-            fontSize: '9px',
+            fontSize: '8px',
             fontStyle: 'bold',
             color: '#070b14',
           })
@@ -368,8 +424,9 @@ export class WorldMapScene extends Phaser.Scene {
       }
 
       // Node title pill below pin
-      const labelY = y + radius + 14;
-      const labelBg = this.add.rectangle(x, labelY, Math.min(116, node.title.length * 7 + 16), 16, 0x090e1a, 0.88);
+      const labelY = Math.min(262, y + radius + 14);
+      const pillW = Math.min(148, node.title.length * 6.5 + 18);
+      const labelBg = this.add.rectangle(x, labelY, pillW, 16, 0x090e1a, 0.9);
       const labelTxt = this.add
         .text(x, labelY, node.title, {
           fontFamily: FONT,
@@ -382,7 +439,10 @@ export class WorldMapScene extends Phaser.Scene {
 
       if (unlocked) {
         pin.setInteractive({ useHandCursor: true });
-        pin.on('pointerdown', () => this._showPreviewCard(node));
+        pin.on('pointerdown', () => {
+          audioManager.playSfx('click');
+          this._showPreviewCard(node);
+        });
       }
     });
   }
@@ -398,16 +458,14 @@ export class WorldMapScene extends Phaser.Scene {
 
     this.previewContainer = this.add.container(0, 0).setDepth(60);
 
-    // Transparent dismiss backdrop over map
-    const dim = this.add
-      .rectangle(180, 320, 360, 640, 0x04070f, 0.6)
-      .setInteractive();
+    // Dismiss backdrop
+    const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.62).setInteractive();
     dim.on('pointerdown', () => this._hidePreviewCard());
 
-    const cardW = 332;
-    const cardH = 198;
-    const cx = 180;
-    const cy = 382;
+    const cardW = 392;
+    const cardH = 196;
+    const cx = 320;
+    const cy = 176;
     const left = cx - cardW / 2;
     const top = cy - cardH / 2;
 
@@ -427,17 +485,20 @@ export class WorldMapScene extends Phaser.Scene {
         color: '#e2e8f0',
       })
       .setOrigin(0.5);
-    closeBtn.on('pointerdown', () => this._hidePreviewCard());
+    closeBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
+      this._hidePreviewCard();
+    });
 
     // Enemy sprite preview
-    const spriteBg = this.add.rectangle(left + 50, top + 74, 72, 72, 0x090e1a).setStrokeStyle(2, enemyMeta.color);
+    const spriteBg = this.add.rectangle(left + 56, top + 76, 78, 78, 0x090e1a).setStrokeStyle(2, enemyMeta.color);
     const texKey = getMonsterTextureKey(node.enemyId, 0);
     const enemyImg = this.add
-      .image(left + 50, top + 74, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-      .setScale(1.1);
+      .image(left + 56, top + 76, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+      .setScale(1.18);
 
     // Stage & Enemy Info
-    const infoX = left + 98;
+    const infoX = left + 108;
     const stageTxt = this.add.text(infoX, top + 16, `CH.${node.chapter} • ${node.title}`, {
       fontFamily: FONT,
       fontSize: '12px',
@@ -478,9 +539,10 @@ export class WorldMapScene extends Phaser.Scene {
 
     // Rewards line
     const itemEntries = Object.entries(node.itemRewards ?? {});
-    const itemStr = itemEntries.length > 0
-      ? '  ' + itemEntries.map(([k, v]) => `+${v} ${k.replace('_', ' ')}`).join(', ')
-      : '';
+    const itemStr =
+      itemEntries.length > 0
+        ? '  ' + itemEntries.map(([k, v]) => `+${v} ${k.replace('_', ' ')}`).join(', ')
+        : '';
     const rewardTxt = this.add.text(
       infoX,
       top + 80,
@@ -489,18 +551,18 @@ export class WorldMapScene extends Phaser.Scene {
         fontFamily: FONT,
         fontSize: '9px',
         color: '#cbd5e1',
-        wordWrap: { width: 220 },
+        wordWrap: { width: 266 },
       }
     );
 
     // Start Battle button
     const startBtn = this.add
-      .rectangle(cx, top + cardH - 34, 286, 46, 0x10b981)
+      .rectangle(cx, top + cardH - 32, 344, 42, 0x10b981)
       .setStrokeStyle(2, 0xa7f3d0)
       .setInteractive({ useHandCursor: true });
 
     const startTxt = this.add
-      .text(cx, top + cardH - 34, 'MULAI PERTARUNGAN', {
+      .text(cx, top + cardH - 32, 'MULAI PERTARUNGAN', {
         fontFamily: FONT,
         fontSize: '14px',
         fontStyle: 'bold',
@@ -511,6 +573,7 @@ export class WorldMapScene extends Phaser.Scene {
     startBtn.on('pointerover', () => startBtn.setFillStyle(0x34d399));
     startBtn.on('pointerout', () => startBtn.setFillStyle(0x10b981));
     startBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
       this._hidePreviewCard();
       this.scene.start('BattleScene', {
         mode: 'campaign',
@@ -546,23 +609,24 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   _buildBottomActionBar() {
+    // Bottom Bar (y: 274..360, height 86)
     const g = this.add.graphics().setDepth(20);
     g.fillStyle(0x0a101f, 1);
-    g.fillRect(0, 500, 360, 140);
+    g.fillRect(0, 274, 640, 86);
     g.fillStyle(0x263554, 1);
-    g.fillRect(0, 500, 360, 2);
+    g.fillRect(0, 274, 640, 2);
 
-    // HEAL CAMP button (left)
+    // HEAL CAMP button (right-top)
     const healBtn = this.add
-      .rectangle(94, 608, 166, 46, 0x065f46)
+      .rectangle(546, 300, 168, 32, 0x065f46)
       .setStrokeStyle(2, 0x34d399)
       .setInteractive({ useHandCursor: true })
       .setDepth(22);
 
     this.add
-      .text(94, 608, 'HEAL CAMP', {
+      .text(546, 300, 'HEAL CAMP', {
         fontFamily: FONT,
-        fontSize: '13px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#ecfdf5',
       })
@@ -572,22 +636,23 @@ export class WorldMapScene extends Phaser.Scene {
     healBtn.on('pointerover', () => healBtn.setFillStyle(0x047857));
     healBtn.on('pointerout', () => healBtn.setFillStyle(0x065f46));
     healBtn.on('pointerdown', () => {
+      audioManager.playSfx('heal');
       gameState.healAllParty();
       this._renderPartyStrip();
       this._showToast('HEAL CAMP: Tim pulih 100% HP & SP!', '#4ade80');
     });
 
-    // PARTY modal button (right)
+    // PARTY modal button (right-bottom)
     const partyBtn = this.add
-      .rectangle(266, 608, 166, 46, 0x1e293b)
+      .rectangle(546, 337, 168, 30, 0x1e293b)
       .setStrokeStyle(2, 0x38bdf8)
       .setInteractive({ useHandCursor: true })
       .setDepth(22);
 
     this.add
-      .text(266, 608, 'PARTY', {
+      .text(546, 337, 'PARTY', {
         fontFamily: FONT,
-        fontSize: '13px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#e0f2fe',
       })
@@ -596,7 +661,10 @@ export class WorldMapScene extends Phaser.Scene {
 
     partyBtn.on('pointerover', () => partyBtn.setFillStyle(0x334155));
     partyBtn.on('pointerout', () => partyBtn.setFillStyle(0x1e293b));
-    partyBtn.on('pointerdown', () => this._showPartyModal());
+    partyBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
+      this._showPartyModal();
+    });
   }
 
   _renderPartyStrip() {
@@ -607,11 +675,12 @@ export class WorldMapScene extends Phaser.Scene {
 
     this.partyStripContainer = this.add.container(0, 0).setDepth(22);
 
-    const slotW = 110;
-    const slotH = 66;
-    const gap = 6;
-    const startX = 9;
-    const y = 510;
+    // Compact 3-slot Party strip (left/center, x: 10..448, y: 282..352)
+    const slotW = 140;
+    const slotH = 70;
+    const gap = 8;
+    const startX = 10;
+    const y = 282;
 
     for (let i = 0; i < 3; i++) {
       const x = startX + i * (slotW + gap);
@@ -622,7 +691,7 @@ export class WorldMapScene extends Phaser.Scene {
           .rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, 0x0f172a)
           .setStrokeStyle(1, 0x1e293b);
         const emptyTxt = this.add
-          .text(x + slotW / 2, y + slotH / 2, 'EMPTY', {
+          .text(x + slotW / 2, y + slotH / 2, 'EMPTY SLOT', {
             fontFamily: FONT,
             fontSize: '10px',
             color: '#475569',
@@ -640,34 +709,37 @@ export class WorldMapScene extends Phaser.Scene {
         .rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, isLead ? 0x162440 : 0x111a2e)
         .setStrokeStyle(isLead ? 2 : 1, isLead ? meta.color : 0x2e3c59)
         .setInteractive({ useHandCursor: true });
-      bg.on('pointerdown', () => this._showPartyModal());
+      bg.on('pointerdown', () => {
+        audioManager.playSfx('click');
+        this._showPartyModal();
+      });
 
       const texKey = getMonsterTextureKey(mon.id, 0);
       const sprite = this.add
-        .image(x + 22, y + 26, this.textures.exists(texKey) ? texKey : 'particle_pixel')
-        .setScale(0.62);
+        .image(x + 24, y + 26, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .setScale(0.68);
 
-      const nameTxt = this.add.text(x + 42, y + 8, mon.name.slice(0, 8), {
+      const nameTxt = this.add.text(x + 48, y + 8, mon.name.slice(0, 10), {
         fontFamily: FONT,
         fontSize: '10px',
         fontStyle: 'bold',
         color: '#f8fafc',
       });
 
-      const lvTxt = this.add.text(x + 42, y + 22, `Lv.${mon.level}${isLead ? ' ★' : ''}`, {
+      const lvTxt = this.add.text(x + 48, y + 22, `Lv.${mon.level}${isLead ? ' ★' : ''}`, {
         fontFamily: FONT,
         fontSize: '9px',
         color: isLead ? '#fde047' : '#94a3b8',
       });
 
-      const barW = 94;
-      const track = this.add.rectangle(x + 8, y + 48, barW, 7, 0x090e1a).setOrigin(0, 0.5);
+      const barW = 122;
+      const track = this.add.rectangle(x + 9, y + 48, barW, 7, 0x090e1a).setOrigin(0, 0.5);
       const fill = this.add
-        .rectangle(x + 9, y + 48, Math.round((barW - 2) * Math.max(0, Math.min(1, ratio))), 5, hpBarColor(ratio))
+        .rectangle(x + 10, y + 48, Math.round((barW - 2) * Math.max(0, Math.min(1, ratio))), 5, hpBarColor(ratio))
         .setOrigin(0, 0.5);
 
       const hpTxt = this.add
-        .text(x + slotW - 8, y + 58, `${mon.currentHp}/${mon.maxHp}`, {
+        .text(x + slotW - 9, y + 60, `${mon.currentHp}/${mon.maxHp}`, {
           fontFamily: FONT,
           fontSize: '8px',
           color: '#cbd5e1',
@@ -684,18 +756,18 @@ export class WorldMapScene extends Phaser.Scene {
 
     this.partyModalContainer = this.add.container(0, 0).setDepth(70);
 
-    const dim = this.add.rectangle(180, 320, 360, 640, 0x04070f, 0.8).setInteractive();
+    const dim = this.add.rectangle(320, 180, 640, 360, 0x04070f, 0.8).setInteractive();
     dim.on('pointerdown', () => this._hidePartyModal());
 
-    const panelW = 332;
-    const panelH = 420;
-    const cx = 180;
-    const cy = 310;
+    const panelW = 568;
+    const panelH = 276;
+    const cx = 320;
+    const cy = 180;
     const left = cx - panelW / 2;
     const top = cy - panelH / 2;
 
     const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x111a2e).setStrokeStyle(2, 0x38bdf8).setInteractive();
-    const title = this.add.text(left + 16, top + 16, 'PARTY & LEAD ORDER', {
+    const title = this.add.text(left + 16, top + 14, 'PARTY & LEAD ORDER', {
       fontFamily: FONT,
       fontSize: '13px',
       fontStyle: 'bold',
@@ -703,83 +775,108 @@ export class WorldMapScene extends Phaser.Scene {
     });
 
     const storageCount = gameState.storage?.length ?? 0;
-    const sub = this.add.text(left + 16, top + 34, `Active: ${gameState.party.length}/3   Storage: ${storageCount}`, {
+    const sub = this.add.text(left + 16, top + 32, `Active: ${gameState.party.length}/3   Storage: ${storageCount}`, {
       fontFamily: FONT,
       fontSize: '10px',
       color: '#94a3b8',
     });
 
     const closeBtn = this.add
-      .rectangle(left + panelW - 26, top + 24, 30, 26, 0x1e293b)
+      .rectangle(left + panelW - 24, top + 22, 28, 24, 0x1e293b)
       .setStrokeStyle(1, 0x475569)
       .setInteractive({ useHandCursor: true });
     const closeTxt = this.add
-      .text(left + panelW - 26, top + 24, 'X', {
+      .text(left + panelW - 24, top + 22, 'X', {
         fontFamily: FONT,
         fontSize: '11px',
         fontStyle: 'bold',
         color: '#f8fafc',
       })
       .setOrigin(0.5);
-    closeBtn.on('pointerdown', () => this._hidePartyModal());
+    closeBtn.on('pointerdown', () => {
+      audioManager.playSfx('click');
+      this._hidePartyModal();
+    });
 
     this.partyModalContainer.add([dim, panel, title, sub, closeBtn, closeTxt]);
 
-    const cardH = 98;
-    const startY = top + 106;
-    const gapY = 106;
+    // 3 horizontal Monsver cards side-by-side inside modal
+    const cardW = 172;
+    const cardH = 204;
+    const gapX = 10;
+    const startX = left + 16;
+    const cardY = top + 54;
 
-    gameState.party.forEach((mon, idx) => {
-      const y = startY + idx * gapY;
+    gameState.party.slice(0, 3).forEach((mon, idx) => {
+      const cardX = startX + idx * (cardW + gapX);
+      const cardCx = cardX + cardW / 2;
+      const cardCy = cardY + cardH / 2;
       const meta = ELEMENT_META[mon.element] ?? ELEMENT_META[0];
       const isLead = idx === 0;
       const ratio = mon.currentHp / Math.max(1, mon.maxHp);
 
       const cardBg = this.add
-        .rectangle(cx, y, panelW - 24, cardH, isLead ? 0x182744 : 0x0f172a)
+        .rectangle(cardCx, cardCy, cardW, cardH, isLead ? 0x182744 : 0x0f172a)
         .setStrokeStyle(2, isLead ? meta.color : 0x263554);
 
       const texKey = getMonsterTextureKey(mon.id, 0);
       const img = this.add
-        .image(left + 44, y - 4, this.textures.exists(texKey) ? texKey : 'particle_pixel')
+        .image(cardCx, cardY + 38, this.textures.exists(texKey) ? texKey : 'particle_pixel')
         .setScale(0.95);
 
-      const nameTxt = this.add.text(left + 84, y - 38, `${mon.name}  Lv.${mon.level}`, {
-        fontFamily: FONT,
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: '#f8fafc',
-      });
+      const nameTxt = this.add
+        .text(cardCx, cardY + 74, `${mon.name}  Lv.${mon.level}`, {
+          fontFamily: FONT,
+          fontSize: '11px',
+          fontStyle: 'bold',
+          color: '#f8fafc',
+        })
+        .setOrigin(0.5, 0);
 
-      const elTxt = this.add.text(left + 84, y - 20, `${meta.label} • HP ${mon.currentHp}/${mon.maxHp} • SP ${mon.currentSp}/${mon.maxSp}`, {
-        fontFamily: FONT,
-        fontSize: '9px',
-        color: meta.hex,
-      });
+      const elTxt = this.add
+        .text(cardCx, cardY + 90, `${meta.label} • SP ${mon.currentSp}/${mon.maxSp}`, {
+          fontFamily: FONT,
+          fontSize: '9px',
+          color: meta.hex,
+        })
+        .setOrigin(0.5, 0);
 
-      const track = this.add.rectangle(left + 84, y - 2, 140, 7, 0x090e1a).setOrigin(0, 0.5);
+      const barW = 144;
+      const track = this.add.rectangle(cardCx - barW / 2, cardY + 110, barW, 7, 0x090e1a).setOrigin(0, 0.5);
       const fill = this.add
-        .rectangle(left + 85, y - 2, Math.round(138 * Math.max(0, Math.min(1, ratio))), 5, hpBarColor(ratio))
+        .rectangle(cardCx - barW / 2 + 1, cardY + 110, Math.round((barW - 2) * Math.max(0, Math.min(1, ratio))), 5, hpBarColor(ratio))
         .setOrigin(0, 0.5);
 
-      const statsTxt = this.add.text(left + 84, y + 12, `ATK ${mon.attack}  DEF ${mon.defense}  SPD ${mon.speed}`, {
-        fontFamily: FONT,
-        fontSize: '9px',
-        color: '#cbd5e1',
-      });
+      const hpTxt = this.add
+        .text(cardCx, cardY + 122, `HP ${mon.currentHp}/${mon.maxHp}`, {
+          fontFamily: FONT,
+          fontSize: '9px',
+          color: '#cbd5e1',
+        })
+        .setOrigin(0.5, 0);
 
-      const xpTxt = this.add.text(left + 84, y + 28, `XP ${mon.xp ?? 0}/${mon.xpToNext ?? mon.level * 50}`, {
-        fontFamily: FONT,
-        fontSize: '9px',
-        color: '#a855f7',
-      });
+      const statsTxt = this.add
+        .text(cardCx, cardY + 137, `ATK ${mon.attack}  DEF ${mon.defense}  SPD ${mon.speed}`, {
+          fontFamily: FONT,
+          fontSize: '8px',
+          color: '#94a3b8',
+        })
+        .setOrigin(0.5, 0);
 
-      this.partyModalContainer.add([cardBg, img, nameTxt, elTxt, track, fill, statsTxt, xpTxt]);
+      const xpTxt = this.add
+        .text(cardCx, cardY + 150, `XP ${mon.xp ?? 0}/${mon.xpToNext ?? mon.level * 50}`, {
+          fontFamily: FONT,
+          fontSize: '8px',
+          color: '#a855f7',
+        })
+        .setOrigin(0.5, 0);
+
+      this.partyModalContainer.add([cardBg, img, nameTxt, elTxt, track, fill, hpTxt, statsTxt, xpTxt]);
 
       if (isLead) {
-        const leadBg = this.add.rectangle(left + panelW - 52, y + 24, 62, 24, 0x065f46).setStrokeStyle(1, 0x34d399);
+        const leadBg = this.add.rectangle(cardCx, cardY + 180, 128, 24, 0x065f46).setStrokeStyle(1, 0x34d399);
         const leadTxt = this.add
-          .text(left + panelW - 52, y + 24, 'LEAD ★', {
+          .text(cardCx, cardY + 180, 'LEAD ★', {
             fontFamily: FONT,
             fontSize: '10px',
             fontStyle: 'bold',
@@ -789,11 +886,11 @@ export class WorldMapScene extends Phaser.Scene {
         this.partyModalContainer.add([leadBg, leadTxt]);
       } else {
         const swapBtn = this.add
-          .rectangle(left + panelW - 56, y + 24, 72, 28, 0x1d4ed8)
+          .rectangle(cardCx, cardY + 180, 128, 26, 0x1d4ed8)
           .setStrokeStyle(1, 0x60a5fa)
           .setInteractive({ useHandCursor: true });
         const swapTxt = this.add
-          .text(left + panelW - 56, y + 24, 'SET LEAD', {
+          .text(cardCx, cardY + 180, 'SET LEAD', {
             fontFamily: FONT,
             fontSize: '10px',
             fontStyle: 'bold',
@@ -802,6 +899,7 @@ export class WorldMapScene extends Phaser.Scene {
           .setOrigin(0.5);
 
         swapBtn.on('pointerdown', () => {
+          audioManager.playSfx('click');
           gameState.swapPartyOrder(0, idx);
           this._renderPartyStrip();
           this._showPartyModal();
@@ -821,11 +919,11 @@ export class WorldMapScene extends Phaser.Scene {
 
   _showToast(message, color = '#4ade80') {
     const toastBg = this.add
-      .rectangle(180, 486, 320, 28, 0x090e1a, 0.94)
+      .rectangle(320, 260, 360, 26, 0x090e1a, 0.95)
       .setStrokeStyle(1, hexToInt(color, 0x4ade80))
       .setDepth(85);
     const toastTxt = this.add
-      .text(180, 486, message, {
+      .text(320, 260, message, {
         fontFamily: FONT,
         fontSize: '10px',
         fontStyle: 'bold',
@@ -836,7 +934,7 @@ export class WorldMapScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: [toastBg, toastTxt],
-      y: 472,
+      y: 246,
       alpha: 0,
       delay: 1100,
       duration: 450,
