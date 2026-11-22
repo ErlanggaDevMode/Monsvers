@@ -859,6 +859,106 @@ export function registerStoryTextures(scene) {
   }
 
   // --------------------------------------------------------------------------
+  // 1b. Full-Body Standing Pixel-Art MC Character (20x24 scaled 3x -> 60x72, 2 frames)
+  // --------------------------------------------------------------------------
+  const mcPalette = {
+    '.': null,
+    'O': '#050811', // Dark outline
+    'H': '#78350f', // Chestnut hair
+    'h': '#b45309', // Hair highlight
+    'D': '#16a34a', // Green headband
+    'd': '#facc15', // Gold headband emblem
+    'S': '#fde68a', // Skin
+    's': '#f59e0b', // Skin shade
+    'E': '#0f172a', // Eye pupil
+    'e': '#ffffff', // Eye shine
+    'i': '#38bdf8', // Blue iris
+    'T': '#047857', // Emerald Tamer tunic
+    't': '#34d399', // Tunic trim/highlight
+    'C': '#1e3a8a', // Adventurer cape/scarf
+    'c': '#38bdf8', // Scarf highlight
+    'G': '#f59e0b', // Belt buckle / Rift Orb pouch
+    'P': '#1e293b', // Trousers
+    'B': '#451a03', // Boots
+    'b': '#92400e', // Boot highlight
+  };
+  const mcFrames = [
+    [
+      '......OOOOOOOO......',
+      '.....OHHhHHhHHO.....',
+      '....OHHhhHHhhHHO....',
+      '....ODDDDddDDDDO....',
+      '....OHSSSSSSSSHO....',
+      '....OHSEiSSiESHO....',
+      '....OHSEeSSeESHO....',
+      '.....OSSSssSSSO.....',
+      '....OOcCCCCCCcOO....',
+      '...OCCtTTTTTTtCCO...',
+      '...OCOTTTTTTTTOCO...',
+      '...O.OSTTTTTTSO.O...',
+      '.....OSTTGTTTSO.....',
+      '.....OOTTTTTTOO.....',
+      '......OPPPPPPO......',
+      '......OPP..PPO......',
+      '......OPP..PPO......',
+      '......OPP..PPO......',
+      '.....OBbO..ObBO.....',
+      '.....OBBO..OBBO.....',
+      '.....OOOO..OOOO.....',
+      '....................',
+    ],
+    [
+      '....................',
+      '......OOOOOOOO......',
+      '.....OHHhHHhHHO.....',
+      '....OHHhhHHhhHHO....',
+      '....ODDDDddDDDDO....',
+      '....OHSSSSSSSSHO....',
+      '....OHSEiSSiESHO....',
+      '....OHSEeSSeESHO....',
+      '.....OSSSssSSSO.....',
+      '...OOccCCCCCCccOO...',
+      '..OCCTtTTTTTTtTCCO..',
+      '...O.OSTTTTTTSO.O...',
+      '.....OSTTGTTTSO.....',
+      '.....OOTTTTTTOO.....',
+      '......OPPPPPPO......',
+      '......OPP..PPO......',
+      '......OPP..PPO......',
+      '......OPP..PPO......',
+      '.....OBbO..ObBO.....',
+      '.....OBBO..OBBO.....',
+      '.....OOOO..OOOO.....',
+      '....................',
+    ],
+  ];
+
+  mcFrames.forEach((grid, frameIdx) => {
+    const key = `char_mc_${frameIdx}`;
+    if (scene.textures.exists(key)) return;
+    const mcScale = 3;
+    const w = 20 * mcScale;
+    const h = 22 * mcScale;
+    const tex = createOrGetCanvasTexture(scene, key, w, h);
+    if (tex && tex.context) {
+      const ctx = tex.context;
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, w, h);
+      for (let y = 0; y < grid.length; y++) {
+        const row = grid[y];
+        for (let x = 0; x < row.length; x++) {
+          const col = mcPalette[row[x]];
+          if (col) {
+            ctx.fillStyle = col;
+            ctx.fillRect(x * mcScale, y * mcScale, mcScale, mcScale);
+          }
+        }
+      }
+      if (typeof tex.refresh === 'function') tex.refresh();
+    }
+  });
+
+  // --------------------------------------------------------------------------
   // 2. Chapter Battle Arena Backdrops (640x360)
   // --------------------------------------------------------------------------
   const arenaBackdrops = [

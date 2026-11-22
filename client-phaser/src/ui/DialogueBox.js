@@ -37,8 +37,9 @@ function getSpeakerInitial(speaker = '') {
 }
 
 export class DialogueBox {
-  constructor(scene) {
+  constructor(scene, options = {}) {
     this.scene = scene;
+    this._dimAlpha = typeof options.dimAlpha === 'number' ? options.dimAlpha : 0.62;
     this._active = false;
     this._lines = [];
     this._lineIndex = 0;
@@ -164,7 +165,7 @@ export class DialogueBox {
     // 1. Full-screen semi-transparent backdrop dimmer blocking underlying scene clicks
     const backdrop = this._track(
       this.scene.add
-        .rectangle(width / 2, height / 2, width, height, 0x050811, 0.62)
+        .rectangle(width / 2, height / 2, width, height, 0x050811, this._dimAlpha)
         .setScrollFactor(0)
         .setDepth(BASE_DEPTH)
         .setInteractive({ useHandCursor: true })

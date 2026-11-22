@@ -17,12 +17,23 @@ export class PrologueScene extends Phaser.Scene {
     this.selectedName = gameState.playerName || MC_PRESET_NAMES[0] || 'Arion';
     this.skipped = false;
     this.inNamePicker = false;
+    this._destroyed = false;
     this.stageObjects = [];
     this.nameBtnRefs = [];
+    this.mcSprite = null;
+    this.mcFrame = 0;
   }
 
   async create() {
     const { width, height } = this.scale;
+    this._destroyed = false;
+    this.events.once('shutdown', () => {
+      this._destroyed = true;
+    });
+    this.events.once('destroy', () => {
+      this._destroyed = true;
+    });
+
     this.cameras.main.fadeIn(360, 5, 8, 17);
 
     audioManager.playBgm('title');
@@ -49,7 +60,7 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(32);
 
     this.actSubtitle = this.add
-      .text(width / 2, 52, '', {
+      .text(width / 2, 50, '', {
         fontFamily: FONT,
         fontSize: '10px',
         fontStyle: 'bold',
@@ -59,14 +70,26 @@ export class PrologueScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(30);
 
+    // Animate standing MC sprite idle frames
+    this.time.addEvent({
+      delay: 460,
+      loop: true,
+      callback: () => {
+        if (!this.mcSprite || !this.mcSprite.active) return;
+        this.mcFrame = this.mcFrame === 0 ? 1 : 0;
+        const key = `char_mc_${this.mcFrame}`;
+        if (this.textures.exists(key)) this.mcSprite.setTexture(key);
+      },
+    });
+
     // Play the 3 cinematic prologue acts introducing the MC
     for (let i = 0; i < PROLOGUE_ACTS.length; i++) {
-      if (this.skipped || !this.scene.isActive()) break;
+      if (this.skipped || this._destroyed) break;
       const act = PROLOGUE_ACTS[i];
       await this._playAct(act, i);
     }
 
-    if (!this.scene.isActive()) return;
+    if (this._destroyed) return;
 
     if (this.replayOnly) {
       this._finishTo('TitleScene');
@@ -158,38 +181,42 @@ export class PrologueScene extends Phaser.Scene {
       this._renderOrinCall(width / 2, 146);
     }
 
-    // Play act dialogue via DialogueBox
-    const box = new DialogueBox(this);
+    // Play act dialogue via DialogueBox with light dimmer so MC character stays bright & crystal clear
+    const box = new DialogueBox(this, { dimAlpha: 0.12 });
     this.activeDialogue = box;
     await box.play(act.dialogue);
     this.activeDialogue = null;
   }
 
   _renderMcSpotlight(cx, cy) {
-    const card = this.add.rectangle(cx, cy, 420, 128, 0x0b1325, 0.88).setStrokeStyle(2, 0x38bdf8).setDepth(10);
-    const portraitBg = this.add.rectangle(cx - 142, cy, 88, 88, 0x0f172a).setStrokeStyle(2, 0x22c55e).setDepth(11);
+    const card = this.add.rectangle(cx, cy, 460, 134, 0x0b1325, 0.92).setStrokeStyle(2, 0x38bdf8).setDepth(10);
+    const ped = this.add.ellipse(cx - 156, cy + 44, 84, 20, 0x16a34a, 0.35).setStrokeStyle(2, 0x4ade80, 0.7).setDepth(11);
 
-    const glow = this.add.circle(cx - 142, cy, 46, 0x22c55e, 0.14).setDepth(10);
+    const glow = this.add.circle(cx - 156, cy + 4, 48, 0x22c55e, 0.16).setDepth(10);
     this.tweens.add({
       targets: glow,
       scale: 1.15,
-      alpha: 0.28,
+      alpha: 0.3,
       yoyo: true,
       repeat: -1,
       duration: 1300,
       ease: 'Sine.easeInOut',
     });
 
-    const items = [card, portraitBg, glow];
+    const items = [card, ped, glow];
 
-    if (this.textures.exists('portrait_player')) {
-      const p = this.add.image(cx - 142, cy, 'portrait_player').setScale(1.65).setDepth(12);
-      this.tweens.add({ targets: p, y: cy - 3, yoyo: true, repeat: -1, duration: 1000, ease: 'Sine.easeInOut' });
+    if (this.textures.exists('char_mc_0')) {
+      const hero = this.add.image(cx - 156, cy - 2, 'char_mc_0').setScale(1.45).setDepth(12);
+      this.tweens.add({ targets: hero, y: cy - 6, yoyo: true, repeat: -1, duration: 950, ease: 'Sine.easeInOut' });
+      this.mcSprite = hero;
+      items.push(hero);
+    } else if (this.textures.exists('portrait_player')) {
+      const p = this.add.image(cx - 156, cy, 'portrait_player').setScale(1.65).setDepth(12);
       items.push(p);
     }
 
     const badge = this.add
-      .text(cx - 82, cy - 42, 'MAIN CHARACTER • TAMER MUDA', {
+      .text(cx - 90, cy - 46, 'MAIN CHARACTER • TAMER MUDA', {
         fontFamily: FONT,
         fontSize: '9px',
         fontStyle: 'bold',
@@ -198,7 +225,7 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(12);
 
     const title = this.add
-      .text(cx - 82, cy - 22, 'SANG PENJAGA ELEMEN', {
+      .text(cx - 90, cy - 26, 'SANG PENJAGA ELEMEN', {
         fontFamily: FONT,
         fontSize: '15px',
         fontStyle: 'bold',
@@ -208,8 +235,8 @@ export class PrologueScene extends Phaser.Scene {
 
     const bio = this.add
       .text(
-        cx - 82,
-        cy + 2,
+        cx - 90,
+        cy - 2,
         'Asal: Desa Solara, Benua Aetheria\nImpian: Menjalin ikatan sejati dengan Monsver\ndan menjaga harmoni 6 elemen dunia.',
         {
           fontFamily: FONT,
@@ -266,7 +293,11 @@ export class PrologueScene extends Phaser.Scene {
       items.push(shadow);
     }
 
-    if (this.textures.exists('portrait_player')) {
+    if (this.textures.exists('char_mc_0')) {
+      const hero = this.add.image(cx - 158, cy, 'char_mc_0').setScale(1.35).setDepth(12);
+      this.mcSprite = hero;
+      items.push(hero);
+    } else if (this.textures.exists('portrait_player')) {
       const hero = this.add.image(cx - 158, cy, 'portrait_player').setScale(1.5).setDepth(12);
       items.push(hero);
     }
@@ -278,7 +309,12 @@ export class PrologueScene extends Phaser.Scene {
     const card = this.add.rectangle(cx, cy, 430, 118, 0x0b1325, 0.9).setStrokeStyle(2, 0x38bdf8).setDepth(10);
     const items = [card];
 
-    if (this.textures.exists('portrait_player')) {
+    if (this.textures.exists('char_mc_0')) {
+      const pFrame = this.add.rectangle(cx - 140, cy, 76, 86, 0x0f172a).setStrokeStyle(2, 0x22c55e).setDepth(11);
+      const pImg = this.add.image(cx - 140, cy, 'char_mc_0').setScale(1.18).setDepth(12);
+      this.mcSprite = pImg;
+      items.push(pFrame, pImg);
+    } else if (this.textures.exists('portrait_player')) {
       const pFrame = this.add.rectangle(cx - 140, cy, 76, 76, 0x0f172a).setStrokeStyle(2, 0x22c55e).setDepth(11);
       const pImg = this.add.image(cx - 140, cy, 'portrait_player').setScale(1.45).setDepth(12);
       items.push(pFrame, pImg);
@@ -330,7 +366,11 @@ export class PrologueScene extends Phaser.Scene {
     const pFrame = this.add.rectangle(150, 172, 92, 92, 0x0f172a).setStrokeStyle(2, 0x22c55e).setDepth(21);
     const items = [panel, pFrame];
 
-    if (this.textures.exists('portrait_player')) {
+    if (this.textures.exists('char_mc_0')) {
+      const pImg = this.add.image(150, 172, 'char_mc_0').setScale(1.3).setDepth(22);
+      this.mcSprite = pImg;
+      items.push(pImg);
+    } else if (this.textures.exists('portrait_player')) {
       const pImg = this.add.image(150, 172, 'portrait_player').setScale(1.75).setDepth(22);
       items.push(pImg);
     }

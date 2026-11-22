@@ -44,6 +44,13 @@ export class BattleOutcomeScene extends Phaser.Scene {
 
   async create() {
     const { width, height } = this.scale;
+    this._destroyed = false;
+    this.events.once('shutdown', () => {
+      this._destroyed = true;
+    });
+    this.events.once('destroy', () => {
+      this._destroyed = true;
+    });
     this.cameras.main.fadeIn(320, 5, 8, 17);
 
     const playerName = gameState.playerName || 'Arion';
@@ -417,10 +424,10 @@ export class BattleOutcomeScene extends Phaser.Scene {
         ...l,
         text: l.text.replace(/Tamer/g, playerName),
       }));
-      await new DialogueBox(this).play(lines);
+      await new DialogueBox(this, { dimAlpha: 0.14 }).play(lines);
     }
 
-    if (!this.scene.isActive()) return;
+    if (this._destroyed) return;
 
     // Post-game action buttons
     this._makeButton(210, 314, 210, 42, 'TITLE SCREEN', 0x1e293b, 0x64748b, '#e2e8f0', () => {
@@ -528,11 +535,11 @@ export class BattleOutcomeScene extends Phaser.Scene {
     if (this.mode === 'campaign') {
       const lines = getDefeatDialogue(playerName);
       if (lines.length > 0) {
-        await new DialogueBox(this).play(lines);
+        await new DialogueBox(this, { dimAlpha: 0.14 }).play(lines);
       }
     }
 
-    if (!this.scene.isActive()) return;
+    if (this._destroyed) return;
 
     // Bottom buttons: Rematch / Map / Title
     if (this.mode === 'campaign' && this.node) {
