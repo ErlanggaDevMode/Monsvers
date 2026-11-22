@@ -114,7 +114,10 @@ export class DialogueBox {
 
   async play(lines = []) {
     if (!Array.isArray(lines) || lines.length === 0) return;
-    if (!this.scene || !this.scene.sys || !this.scene.sys.isActive()) return;
+    if (!this.scene || !this.scene.sys || !this.scene.add) return;
+    const status = this.scene.sys.settings?.status;
+    // Allow both CREATING (3, called inside create()) and RUNNING (5); reject SHUTDOWN (8) / DESTROYED (9)
+    if (status === 8 || status === 9) return;
 
     // Clean up any previous overlay before starting a new one
     if (this._active) {
