@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { battleBridge } from '../bridge/battleBridge.js';
 import { registerAllPixelTextures } from '../art/pixelSprites.js';
+import { registerStoryTextures } from '../art/storySprites.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -72,12 +73,15 @@ export class BootScene extends Phaser.Scene {
       statusText.setText(label);
     };
 
-    // 1. Register procedural pixel sprites & arena textures
-    setProgress(0.35, 'Building pixel textures...');
+    // 1. Register procedural pixel sprites, arena & story portrait textures
+    setProgress(0.3, 'Building pixel textures...');
     registerAllPixelTextures(this);
 
+    setProgress(0.55, 'Loading story portraits...');
+    registerStoryTextures(this);
+
     // 2. Initialize C++ WASM Battle Engine (with JS fallback)
-    setProgress(0.7, 'Initializing Battle Core...');
+    setProgress(0.8, 'Initializing Battle Core...');
     const runtime = await battleBridge.init();
 
     const badgeLabel = runtime === 'cpp-wasm' ? 'C++ WASM CORE READY' : 'JS CORE READY';
@@ -85,7 +89,7 @@ export class BootScene extends Phaser.Scene {
     setProgress(1.0, badgeLabel);
 
     this.time.delayedCall(260, () => {
-      this.scene.start('BattleScene', { runtime });
+      this.scene.start('TitleScene', { runtime });
     });
   }
 }

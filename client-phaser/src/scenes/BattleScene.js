@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
-import { battleBridge, Element, AiTier } from '../bridge/battleBridge.js';
+import { battleBridge, AiTier } from '../bridge/battleBridge.js';
 import { getSkill } from '../data/skills.js';
 import { MONSTERS, STARTER_IDS, createMonsterInstance } from '../data/monsters.js';
+import { ENDING_DIALOGUE, getNodeById, getNextNodeId } from '../data/campaign.js';
 import { getMonsterTextureKey } from '../art/pixelSprites.js';
 import { BattleHud, ELEMENT_META } from '../ui/BattleHud.js';
+import { DialogueBox } from '../ui/DialogueBox.js';
+import { gameState } from '../state/gameState.js';
 
 const FONT = 'monospace';
 
@@ -14,29 +17,43 @@ export class BattleScene extends Phaser.Scene {
 
   init(data) {
     this.runtime = data?.runtime ?? battleBridge.runtime;
+    this.mode = data?.mode ?? 'quick';
+    this.nodeId = data?.nodeId ?? null;
+    this.node = this.mode === 'campaign' ? getNodeById(this.nodeId) : null;
     this.battleNumber = data?.battleNumber ?? 1;
     this.isBusy = false;
     this.battleEnded = false;
     this.seedCounter = (Date.now() % 100000) + this.battleNumber * 97;
 
-    // Persist party across victories, or initialize starter party
-    if (Array.isArray(data?.party) && data.party.length > 0) {
-      this.party = data.party;
-      this.activePartyIndex = data.activePartyIndex ?? 0;
-      this.bag = data.bag ?? { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+    if (this.mode === 'campaign' && this.node) {
+      // Ensure at least one party member is alive when entering campaign battle
+      if (!gameState.party.some((m) => m.currentHp > 0)) {
+        gameState.healAllParty();
+      }
+      this.party = gameState.party;
+      this.activePartyIndex = Math.max(0, this.party.findIndex((m) => m.currentHp > 0));
+      this.bag = gameState.bag;
+      this.enemy = createMonsterInstance(this.node.enemyId, this.node.enemyLevel);
+      this.aiTier = this.node.aiTier ?? AiTier.Trainer;
     } else {
-      this.party = STARTER_IDS.map((id) => createMonsterInstance(id, 5));
-      this.activePartyIndex = 0;
-      this.bag = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
-    }
+      // Quick Battle mode (standalone)
+      if (Array.isArray(data?.party) && data.party.length > 0) {
+        this.party = data.party;
+        this.activePartyIndex = data.activePartyIndex ?? 0;
+        this.bag = data.bag ?? { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+      } else {
+        this.party = STARTER_IDS.map((id) => createMonsterInstance(id, 5));
+        this.activePartyIndex = 0;
+        this.bag = { potion: 3, super_potion: 1, antidote: 2, rift_orb: 3 };
+      }
 
-    // Pick opponent from available MONSTERS roster
-    const allIds = Object.keys(MONSTERS);
-    const enemyPool = allIds.length > 1 ? allIds.filter((id) => id !== this.player.id) : allIds;
-    const enemyId = enemyPool[(this.battleNumber - 1) % enemyPool.length] ?? 'verdantix';
-    const enemyLevel = 5 + Math.floor((this.battleNumber - 1) / 2);
-    this.enemy = createMonsterInstance(enemyId, enemyLevel);
-    this.aiTier = this.battleNumber % 3 === 0 ? AiTier.Boss : AiTier.Trainer;
+      const allIds = Object.keys(MONSTERS);
+      const enemyPool = allIds.length > 1 ? allIds.filter((id) => id !== this.player.id) : allIds;
+      const enemyId = enemyPool[(this.battleNumber - 1) % enemyPool.length] ?? 'verdantix';
+      const enemyLevel = 5 + Math.floor((this.battleNumber - 1) / 2);
+      this.enemy = createMonsterInstance(enemyId, enemyLevel);
+      this.aiTier = this.battleNumber % 3 === 0 ? AiTier.Boss : AiTier.Trainer;
+    }
 
     this.idleFrame = 0;
     this.playerPos = { x: 86, y: 242 };
@@ -52,7 +69,7 @@ export class BattleScene extends Phaser.Scene {
     return this.seedCounter;
   }
 
-  create() {
+  async create() {
     this._buildArenaBackdrop();
     this._buildMonsterSprites();
 
@@ -61,13 +78,22 @@ export class BattleScene extends Phaser.Scene {
       onGuard: () => this.handlePlayerGuard(),
       onUseItem: (itemId) => this.handleUseItem(itemId),
       onSwitchParty: (idx) => this.handlePartySwitch(idx),
-      onRestart: () => this.scene.restart({ runtime: this.runtime, battleNumber: 1 }),
+      onRestart: () => {
+        if (this.mode === 'campaign') {
+          this.scene.start('WorldMapScene', { chapter: this.node?.chapter ?? 1 });
+        } else {
+          this.scene.restart({ mode: 'quick', runtime: this.runtime, battleNumber: 1 });
+        }
+      },
     });
 
     this.hud.setEngineRuntime(this.runtime);
-    this.hud.setStageTitle(`CH.1 HUTAN SOLARA #${this.battleNumber}`);
+    if (this.mode === 'campaign' && this.node) {
+      this.hud.setStageTitle(`CH.${this.node.chapter} ${this.node.title.toUpperCase()}`);
+    } else {
+      this.hud.setStageTitle(`QUICK BATTLE #${this.battleNumber}`);
+    }
     this._syncHud(false);
-    this.hud.setLog(`Wild ${this.enemy.name} (Lv.${this.enemy.level}) muncul!\nPilih aksi untuk ${this.player.name}.`);
 
     // 2-frame pixel idle animation timer
     this.time.addEvent({
@@ -78,16 +104,36 @@ export class BattleScene extends Phaser.Scene {
         this._applyMonsterTextures();
       },
     });
+
+    // Play pre-battle story dialogue if present in campaign node
+    if (this.mode === 'campaign' && this.node?.preDialogue?.length) {
+      this._setBusy(true);
+      this.hud.setLog(`${this.enemy.name} (Lv.${this.enemy.level}) muncul!`);
+      await new DialogueBox(this).play(this.node.preDialogue);
+      this._setBusy(false);
+    }
+
+    const introPrefix =
+      this.mode === 'campaign' && this.node?.type === 'boss'
+        ? 'BOSS '
+        : this.mode === 'campaign' && this.node?.type === 'rival'
+          ? 'Rival '
+          : 'Wild ';
+    this.hud.setLog(`${introPrefix}${this.enemy.name} (Lv.${this.enemy.level}) muncul!\nPilih aksi untuk ${this.player.name}.`);
   }
 
   _buildArenaBackdrop() {
+    const themeKey =
+      this.mode === 'campaign' && this.node?.arenaTheme && this.textures.exists(this.node.arenaTheme)
+        ? this.node.arenaTheme
+        : 'bg_arena_solara';
+
     // Arena area: y: 42..350 (height 308, width 360)
-    if (this.textures.exists('bg_arena_solara')) {
-      const bg = this.add.image(180, 196, 'bg_arena_solara').setDepth(0);
+    if (this.textures.exists(themeKey)) {
+      const bg = this.add.image(180, 196, themeKey).setDepth(0);
       bg.setDisplaySize(360, 312);
     } else {
       const g = this.add.graphics().setDepth(0);
-      // Twilight pixel-sky bands
       g.fillStyle(0x0c172e, 1);
       g.fillRect(0, 42, 360, 68);
       g.fillStyle(0x132645, 1);
@@ -95,25 +141,21 @@ export class BattleScene extends Phaser.Scene {
       g.fillStyle(0x1b3a54, 1);
       g.fillRect(0, 166, 360, 48);
 
-      // Distant pixel forest mountain ridge
       g.fillStyle(0x102538, 1);
       g.fillTriangle(0, 214, 70, 146, 150, 214);
       g.fillTriangle(110, 214, 210, 134, 310, 214);
       g.fillTriangle(250, 214, 330, 152, 360, 214);
 
-      // Canopy silhouettes
       g.fillStyle(0x0f332c, 1);
       for (let x = 0; x < 360; x += 28) {
         g.fillRect(x, 194 + ((x * 7) % 12), 26, 26);
       }
 
-      // Sunlit forest ground
       g.fillStyle(0x173c32, 1);
       g.fillRect(0, 214, 360, 44);
       g.fillStyle(0x122f2a, 1);
       g.fillRect(0, 258, 360, 96);
 
-      // Subtle pixel grass accents
       g.fillStyle(0x22c55e, 0.25);
       for (let i = 0; i < 18; i++) {
         const gx = (i * 43 + 12) % 348;
@@ -124,7 +166,6 @@ export class BattleScene extends Phaser.Scene {
 
     // Crisp battle platforms
     const plat = this.add.graphics().setDepth(4);
-    // Enemy platform (top-right)
     plat.fillStyle(0x091521, 0.72);
     plat.fillEllipse(this.enemyPos.x, this.enemyPos.y + 42, 122, 30);
     plat.fillStyle(0x1e4d3e, 0.9);
@@ -132,7 +173,6 @@ export class BattleScene extends Phaser.Scene {
     plat.lineStyle(2, 0x34d399, 0.45);
     plat.strokeEllipse(this.enemyPos.x, this.enemyPos.y + 38, 114, 24);
 
-    // Player platform (bottom-left)
     plat.fillStyle(0x091521, 0.78);
     plat.fillEllipse(this.playerPos.x, this.playerPos.y + 46, 134, 32);
     plat.fillStyle(0x1e4d3e, 0.95);
@@ -140,7 +180,7 @@ export class BattleScene extends Phaser.Scene {
     plat.lineStyle(2, 0x38bdf8, 0.45);
     plat.strokeEllipse(this.playerPos.x, this.playerPos.y + 42, 126, 26);
 
-    // Ambient floating Solara fireflies
+    // Ambient floating fireflies
     for (let i = 0; i < 8; i++) {
       const mote = this.add
         .rectangle(24 + i * 44, 90 + (i % 3) * 52, 3, 3, i % 2 === 0 ? 0xfde047 : 0x38bdf8, 0.55)
@@ -158,7 +198,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   _buildMonsterSprites() {
-    // Shadows
     this.enemyShadow = this.add
       .ellipse(this.enemyPos.x, this.enemyPos.y + 38, 66, 14, 0x020617, 0.5)
       .setDepth(8);
@@ -166,7 +205,7 @@ export class BattleScene extends Phaser.Scene {
       .ellipse(this.playerPos.x, this.playerPos.y + 42, 74, 16, 0x020617, 0.55)
       .setDepth(8);
 
-    // Monster Sprites (textures are pre-scaled 3x -> 60x60; scale cleanly to fit platforms)
+    // Clean monster sprite scales (enemy: 1.6, player: 1.8)
     this.enemySprite = this.add
       .image(this.enemyPos.x, this.enemyPos.y, getMonsterTextureKey(this.enemy.id, 0))
       .setScale(1.6)
@@ -323,10 +362,8 @@ export class BattleScene extends Phaser.Scene {
     const atkHome = isPlayerAttacking ? this.playerPos : this.enemyPos;
     const defHome = isPlayerAttacking ? this.enemyPos : this.playerPos;
 
-    // Resolve attack in C++ WASM (or JS fallback) BEFORE mutating attacker SP
     const report = battleBridge.resolveAttack(attacker, defender, skill, this.nextSeed());
 
-    // Apply SP cost returned by engine
     const spCost = skill.spCost ?? 0;
     attacker.currentSp =
       report.attackerRemainingSp !== undefined
@@ -341,7 +378,6 @@ export class BattleScene extends Phaser.Scene {
       return report;
     }
 
-    // Lunge toward target
     await this._animateLunge(atkSprite, atkHome, isPlayerAttacking ? 34 : -34, isPlayerAttacking ? -18 : 18);
 
     if (report.missed) {
@@ -351,7 +387,6 @@ export class BattleScene extends Phaser.Scene {
       return report;
     }
 
-    // Support / Heal / Self-Buff skill (power === 0)
     const vfxColor = skill.vfxColor ?? (ELEMENT_META[skill.element]?.color ?? 0xffffff);
     if ((skill.power ?? 0) <= 0) {
       this._spawnParticles(atkHome.x, atkHome.y, vfxColor, 16);
@@ -378,7 +413,6 @@ export class BattleScene extends Phaser.Scene {
       return report;
     }
 
-    // Elemental VFX & Hit flash
     this._spawnParticles(defHome.x, defHome.y, vfxColor, report.critical ? 22 : 14);
 
     const isSuper = report.elementMultiplier > 1.05;
@@ -539,7 +573,6 @@ export class BattleScene extends Phaser.Scene {
       this._syncHud(true);
       this.hud.setLog(`Melempar Rift Orb ke ${this.enemy.name}...`);
 
-      // Animate Rift Orb throw
       const orb = this.add.circle(this.playerPos.x + 20, this.playerPos.y - 10, 8, 0x38bdf8).setStrokeStyle(2, 0xf8fafc).setDepth(35);
       await new Promise((resolve) => {
         this.tweens.add({
@@ -576,13 +609,25 @@ export class BattleScene extends Phaser.Scene {
         this.battleEnded = true;
         this._spawnPopup(this.enemyPos.x, this.enemyPos.y - 24, 'CAPTURED!', '#38bdf8', '16px');
         this.hud.setLog(`Berhasil! ${this.enemy.name} tertangkap oleh Rift Orb!`);
-        await this._delay(600);
-        this._showNextBattleModal(
-          'CAPTURED!',
-          `${this.enemy.name} masuk ke Rift Storage!`,
-          `Catch Rate: ${Math.round(cap.catchRate * 100)}%\nTim siap melanjutkan petualangan.`,
-          0x38bdf8
-        );
+        await this._delay(650);
+
+        if (this.mode === 'campaign' && this.node) {
+          const dest = gameState.addCapturedMonster(this.enemy);
+          const destLabel = dest === 'party' ? 'bergabung ke Party!' : 'masuk ke Rift Storage!';
+          await this._completeCampaignBattle({
+            title: 'CAPTURED!',
+            subtitle: `${this.enemy.name} ${destLabel}`,
+            accentColor: 0x38bdf8,
+            extraNote: `Catch Rate: ${Math.round(cap.catchRate * 100)}%`,
+          });
+        } else {
+          this._showNextBattleModal(
+            'CAPTURED!',
+            `${this.enemy.name} masuk ke Rift Storage!`,
+            `Catch Rate: ${Math.round(cap.catchRate * 100)}%\nTim siap melanjutkan petualangan.`,
+            0x38bdf8
+          );
+        }
         return;
       }
 
@@ -592,7 +637,6 @@ export class BattleScene extends Phaser.Scene {
       await this._delay(650);
     }
 
-    // Enemy turn after item use
     const enemySkill = this._pickEnemySkill();
     const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
     if (eRes.targetFainted) {
@@ -622,7 +666,6 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setMode('FIGHT');
     await this._delay(550);
 
-    // If switched voluntarily while alive, enemy gets a turn
     if (!wasFainted) {
       const enemySkill = this._pickEnemySkill();
       const eRes = await this._executeAttack(this.enemy, this.player, enemySkill, false);
@@ -638,7 +681,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   async _runEndOfTurnPhase() {
-    // Process player status tick + SP regen
     const pTick = battleBridge.processStatusTick(this.player, this.nextSeed());
     this.player.currentHp = pTick.remainingHp;
     this.player.currentSp = pTick.nextSp;
@@ -656,7 +698,6 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    // Process enemy status tick + SP regen
     const eTick = battleBridge.processStatusTick(this.enemy, this.nextSeed());
     this.enemy.currentHp = eTick.remainingHp;
     this.enemy.currentSp = eTick.nextSp;
@@ -696,13 +737,27 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.battleEnded = true;
+
+    if (this.mode === 'campaign') {
+      gameState.healAllParty();
+      this.hud.showResultModal({
+        title: 'DEFEATED',
+        subtitle: 'Seluruh Monsver dalam party tumbang!',
+        detail: 'Tim telah dipulihkan di Camp.\nLatih Monsver-mu dan coba lagi!',
+        buttonLabel: 'KEMBALI KE MAP',
+        accentColor: 0xef4444,
+        onAction: () => this.scene.start('WorldMapScene', { chapter: this.node?.chapter ?? 1 }),
+      });
+      return;
+    }
+
     this.hud.showResultModal({
       title: 'DEFEATED',
       subtitle: 'Seluruh Monsver dalam party tumbang!',
       detail: `Tantangan berhenti di Battle #${this.battleNumber}.\nPulihkan tim dan coba lagi!`,
       buttonLabel: 'PLAY AGAIN',
       accentColor: 0xef4444,
-      onAction: () => this.scene.restart({ runtime: this.runtime, battleNumber: 1 }),
+      onAction: () => this.scene.restart({ mode: 'quick', runtime: this.runtime, battleNumber: 1 }),
     });
   }
 
@@ -716,21 +771,18 @@ export class BattleScene extends Phaser.Scene {
       duration: 380,
     });
 
+    if (this.mode === 'campaign' && this.node) {
+      await this._completeCampaignBattle({
+        title: 'VICTORY!',
+        subtitle: `${this.enemy.name} berhasil dikalahkan!`,
+        accentColor: 0x22c55e,
+      });
+      return;
+    }
+
     const xpGain = 35 + this.enemy.level * 12;
     const xpRes = battleBridge.grantXp(this.player, xpGain);
-    this.player.level = xpRes.newLevel;
-    this.player.xp = xpRes.xp;
-    this.player.xpToNext = xpRes.xpToNext;
-    this.player.maxHp = xpRes.maxHp;
-    this.player.currentHp = xpRes.currentHp;
-    this.player.attack = xpRes.attack;
-    this.player.defense = xpRes.defense;
-    this.player.speed = xpRes.speed;
-    this._syncHud(true);
-
-    if (xpRes.leveledUp) {
-      this._spawnPopup(this.playerPos.x, this.playerPos.y - 34, `LEVEL UP! Lv.${xpRes.newLevel}`, '#fde047', '14px');
-    }
+    this._applyXpResult(xpRes);
 
     const lvlNote = xpRes.leveledUp ? `\nLEVEL UP! ${this.player.name} naik ke Lv.${xpRes.newLevel}!` : '';
     this.hud.setLog(`${this.enemy.name} tumbang! +${xpGain} XP.${lvlNote}`);
@@ -744,6 +796,121 @@ export class BattleScene extends Phaser.Scene {
     );
   }
 
+  _applyXpResult(xpRes) {
+    this.player.level = xpRes.newLevel;
+    this.player.xp = xpRes.xp;
+    this.player.xpToNext = xpRes.xpToNext;
+    this.player.maxHp = xpRes.maxHp;
+    this.player.currentHp = xpRes.currentHp;
+    this.player.attack = xpRes.attack;
+    this.player.defense = xpRes.defense;
+    this.player.speed = xpRes.speed;
+    this._syncHud(true);
+
+    if (xpRes.leveledUp) {
+      this._spawnPopup(this.playerPos.x, this.playerPos.y - 34, `LEVEL UP! Lv.${xpRes.newLevel}`, '#fde047', '14px');
+    }
+  }
+
+  async _showEvolutionCeremony(evo) {
+    const cx = 180;
+    const cy = 196;
+
+    // Flash player sprite and swap texture
+    this.playerSprite.setTintFill(0xfef08a);
+    this._spawnParticles(this.playerPos.x, this.playerPos.y, 0xfde047, 28);
+    await this._delay(240);
+    this._applyMonsterTextures();
+    this.playerSprite.clearTint();
+    this._syncHud(true);
+
+    this.tweens.add({
+      targets: this.playerSprite,
+      scale: 2.15,
+      yoyo: true,
+      duration: 240,
+      ease: 'Back.easeOut',
+      onComplete: () => this.playerSprite.setScale(1.8),
+    });
+
+    const banner = this.add.container(0, 0).setDepth(75);
+    const bg = this.add.rectangle(cx, cy, 326, 86, 0x0b1222, 0.96).setStrokeStyle(3, 0xfacc15);
+    const title = this.add
+      .text(cx, cy - 18, '★ EVOLUTION CEREMONY! ★', {
+        fontFamily: FONT,
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#fde047',
+      })
+      .setOrigin(0.5);
+    const msg = this.add
+      .text(cx, cy + 12, `${evo.oldName} berevolusi menjadi ${evo.newName}!`, {
+        fontFamily: FONT,
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#f8fafc',
+        align: 'center',
+        wordWrap: { width: 300 },
+      })
+      .setOrigin(0.5);
+
+    banner.add([bg, title, msg]);
+    this.hud.setLog(`${evo.oldName} berevolusi menjadi ${evo.newName}!`);
+    await this._delay(1750);
+    banner.destroy(true);
+  }
+
+  async _completeCampaignBattle({ title, subtitle, accentColor = 0x22c55e, extraNote = '' }) {
+    const node = this.node;
+    const xpGain = node.xpReward ?? 35 + this.enemy.level * 12;
+    const xpRes = battleBridge.grantXp(this.player, xpGain);
+    this._applyXpResult(xpRes);
+
+    const lvlNote = xpRes.leveledUp ? ` • LEVEL UP Lv.${xpRes.newLevel}!` : '';
+    this.hud.setLog(`+${xpGain} XP & +${node.goldReward ?? 0}G!${lvlNote}`);
+    await this._delay(750);
+
+    // Check evolution trigger
+    let evoNote = '';
+    const shouldEvolve =
+      xpRes.canEvolve ||
+      Boolean(this.player.evolvesTo && this.player.evolvesAt && this.player.level >= this.player.evolvesAt);
+    if (shouldEvolve) {
+      const evo = gameState.applyEvolution(this.player);
+      if (evo) {
+        evoNote = `\n${evo.oldName} berevolusi menjadi ${evo.newName}!`;
+        await this._showEvolutionCeremony(evo);
+      }
+    }
+
+    // Clear node & persist rewards
+    gameState.markNodeCleared(node.id, node.goldReward ?? 0, node.itemRewards ?? {});
+
+    // Play post-battle dialogue (and ending dialogue if final node)
+    if (Array.isArray(node.postDialogue) && node.postDialogue.length > 0) {
+      await new DialogueBox(this).play(node.postDialogue);
+    }
+    if (getNextNodeId(node.id) === null && Array.isArray(ENDING_DIALOGUE) && ENDING_DIALOGUE.length > 0) {
+      await new DialogueBox(this).play(ENDING_DIALOGUE);
+    }
+
+    const detailLines = [
+      `${this.player.name} mendapat +${xpGain} XP${lvlNote}`,
+      `Reward: +${node.goldReward ?? 0} Gold`,
+    ];
+    if (extraNote) detailLines.push(extraNote);
+    if (evoNote) detailLines.push(evoNote.trim());
+
+    this.hud.showResultModal({
+      title,
+      subtitle,
+      detail: detailLines.join('\n'),
+      buttonLabel: 'KEMBALI KE MAP',
+      accentColor,
+      onAction: () => this.scene.start('WorldMapScene', { chapter: node.chapter }),
+    });
+  }
+
   _showNextBattleModal(title, subtitle, detail, accentColor) {
     this.hud.showResultModal({
       title,
@@ -752,7 +919,6 @@ export class BattleScene extends Phaser.Scene {
       buttonLabel: 'NEXT BATTLE',
       accentColor,
       onAction: () => {
-        // Light recovery between battles
         this.party.forEach((m) => {
           if (m.currentHp > 0) {
             m.currentHp = Math.min(m.maxHp, m.currentHp + Math.round(m.maxHp * 0.3));
@@ -763,6 +929,7 @@ export class BattleScene extends Phaser.Scene {
           m.guarding = false;
         });
         this.scene.restart({
+          mode: 'quick',
           runtime: this.runtime,
           battleNumber: this.battleNumber + 1,
           party: this.party,

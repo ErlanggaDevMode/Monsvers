@@ -13,10 +13,10 @@ Roadmap pengembangan bertahap menggunakan tim Paperclip (`Antigravity`, `Bima`, 
 ---
 
 ## Sprint 2 — Story Campaign, Dialogue System & Party Progression
-- [ ] **M2.1 (Title & Starter Select Scene):** Title screen pixel-art semi-modern, New Game / Continue, intro cutscene Prof. Orin, dan pilih starter (**Pyrofang**, **Aquafin**, **Verdantix**).
-- [ ] **M2.2 (Campaign World Map Scene):** Interactive 4-Chapter node map (Hutan Solara → Teluk Azure → Kawah Ignis → Menara Eclipse) dengan unlock progression, node status badges, dan Boss markers.
-- [ ] **M2.3 (Dialogue & Cutscene Overlay):** Typewriter dialogue engine dengan portrait karakter (Prof. Orin, Rival Kael, Rift Wardens), pre-battle & post-battle story scripts.
-- [ ] **M2.4 (Party, Bag, Capture & Save System):** Party management (3 active Monsvers + switch), Item Bag (`Potion`, `Super Potion`, `Antidote`, `Rift Orb`), wild capture mechanic, XP/Level-up/Evolution ceremony, dan auto-save `localStorage`.
+- [x] **M2.1 (Title & Starter Select Scene):** Title screen pixel-art semi-modern, New Game / Continue, intro cutscene Prof. Orin, dan pilih starter (**Pyrofang**, **Aquafin**, **Verdantix**).
+- [x] **M2.2 (Campaign World Map Scene):** Interactive 4-Chapter node map (Hutan Solara → Teluk Azure → Kawah Ignis → Menara Eclipse) dengan unlock progression, node status badges, dan Boss markers.
+- [x] **M2.3 (Dialogue & Cutscene Overlay):** Typewriter dialogue engine dengan portrait karakter (Prof. Orin, Rival Kael, Rift Wardens), pre-battle & post-battle story scripts.
+- [x] **M2.4 (Party, Bag, Capture & Save System):** Party management (3 active Monsvers + switch), Item Bag (`Potion`, `Super Potion`, `Antidote`, `Rift Orb`), wild capture mechanic, XP/Level-up/Evolution ceremony, dan auto-save `localStorage`.
 
 ---
 
